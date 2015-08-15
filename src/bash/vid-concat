@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# vid-concat [-o outfile] infile [infile...]
+
+if [ $# -eq 0 ]
+then
+  echo "vid-concat [-o outfile] infile [infile...]"
+  exit 1
+fi
+
+if [ "$1" == '-o' ]
+then
+  out="$2"
+  shift 2
+else
+  out="out.avi"
+fi
+
+echo "out = $out"
+
+mencoder -oac copy -ovc copy -forceidx -o "$out" "$@"
