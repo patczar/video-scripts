@@ -9,10 +9,12 @@ where options are:
   -o output_file -- sets output file
   -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
   -r width:height -- final video size, to which the cropped image is resized
+  -s expr -- speed (increased thin many times); you can use expressions like 2002/1000
+  -f number -- frames per second in the result
   -b bitrate -- values 2000-3000 give good results for 800x600 video size or similar
 "
 
-while getopts "ho:c:r:b:" opt; do
+while getopts "ho:c:r:s:f:b:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -23,6 +25,10 @@ while getopts "ho:c:r:b:" opt; do
   c) crop="$OPTARG"
      ;;
   r) resize="$OPTARG"
+     ;;
+  s) speed="$OPTARG"
+     ;;
+  f) fps="$OPTARG"
      ;;
   b) bitrate="$OPTARG"
      ;;
@@ -42,6 +48,7 @@ fi
 
 resize_settings=":1:0:0.1:0.75"
 scale="${resize}${resize_settings}"
+sws=2
 denoise="hqdn3d=2:3:3:4"
 eq="1.1"
 
@@ -50,6 +57,18 @@ then
   echo "$usage"
   exit 1
 fi
+
+# Speed related options
+speedopts=""
+if [ -n "$speed" ]
+then
+speedopts="${speedopts} -speed $speed"
+fi
+if [ -n "$fps" ]
+then
+speedopts="${speedopts} -ofps $fps"
+fi
+
 
 # Video filter flags
 vf="softskip"
@@ -72,9 +91,9 @@ fi
 
 
 echo "PHASE 1"
-mencoder -speed 6006/3000 -ofps 30 -vf "$vf" -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=4:frameref=2:me=dia:pass=1 -nosound -o /dev/null "$@"
+mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts bitrate=${bitrate}:subq=4:frameref=2:me=dia:pass=1 -nosound -o /dev/null "$@"
 
 echo "PHASE 2"
-mencoder -speed 6006/3000 -ofps 30 -vf "$vf" -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=7:frameref=4:me=umh:pass=2 -forceidx -nosound -o "$output" "$@"
+mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts bitrate=${bitrate}:subq=7:frameref=4:me=umh:pass=2 -forceidx -nosound -o "$output" "$@"
 
 echo "FINISHED"
