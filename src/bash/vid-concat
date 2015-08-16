@@ -1,21 +1,27 @@
 #!/bin/bash
 
-# vid-concat [-o outfile] infile [infile...]
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+usage="vid-concat [-o outfile] infile [infile...]"
 
 if [ $# -eq 0 ]
 then
-  echo "vid-concat [-o outfile] infile [infile...]"
+  echo "$usage"
   exit 1
 fi
 
 if [ "$1" == '-o' ]
 then
+  if [ $# -lt 3 ]
+  then
+    echo "$usage"
+    exit 1
+  fi
   out="$2"
   shift 2
 else
   out="out.avi"
 fi
-
-echo "out = $out"
 
 mencoder -oac copy -ovc copy -forceidx -o "$out" "$@"
