@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# This script calls vid-process, but first it sets the default image sizes
+# (cropping and scaling) for the Ferguson camera HD recordings.
+
+usage="vid-fergusson-hd [options] infile [infile...]
+where options are:
+  -h  -- prints usage message
+  -o output_file -- sets output file
+  -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
+  -r width:height -- final video size, to which the cropped image is resized
+  -b bitrate -- values 2000-3000 give good results for 800x600 video size or similar
+"
+
+crop="1200:600:40:72"
+resize="960:480"
+
+vid-process "$@"

@@ -40,9 +40,6 @@ then
 bitrate="2400"
 fi
 
-# crop="1200:600:40:72"
-# resize="960:480"
-
 resize_settings=":1:0:0.1:0.75"
 scale="${resize}${resize_settings}"
 denoise="hqdn3d=2:3:3:4"
