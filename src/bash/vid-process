@@ -35,22 +35,17 @@ if [ -z "$output" ]
 then
 output="out.avi"
 fi
-if [ -z "$crop" ]
-then
-crop="1200:600:40:72"
-fi
-if [ -z "$resize" ]
-then
-resize="960:480"
-fi
 if [ -z "$bitrate" ]
 then
-output="2400"
+bitrate="2400"
 fi
+
+# crop="1200:600:40:72"
+# resize="960:480"
 
 resize_settings=":1:0:0.1:0.75"
 scale="${resize}${resize_settings}"
-denoise=",hqdn3d=2:3:3:4"
+denoise="hqdn3d=2:3:3:4"
 eq="1.1"
 
 if [ $# -eq 0 ]
@@ -59,11 +54,30 @@ then
   exit 1
 fi
 
+# Video filter flags
+vf="softskip"
+if [ -n "$crop" ]
+then
+vf="$vf,crop=$crop"
+fi
+if [ -n "$resize" ]
+then
+vf="$vf,scale=$resize$resize_settings"
+fi
+if [ -n "$denoise" ]
+then
+vf="$vf,$denoise"
+fi
+if [ -n "$eq" ]
+then
+vf="$vf,eq2=$eq"
+fi
+
 
 echo "PHASE 1"
-mencoder -speed 6006/3000 -ofps 30 -vf softskip,crop=${crop},scale=${scale}${denoise},eq2=${eq} -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=4:frameref=2:me=dia:pass=1 -nosound -o /dev/null "$@"
+mencoder -speed 6006/3000 -ofps 30 -vf "$vf" -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=4:frameref=2:me=dia:pass=1 -nosound -o /dev/null "$@"
 
 echo "PHASE 2"
-mencoder -speed 6006/3000 -ofps 30 -vf softskip,crop=${crop},scale=${scale}${denoise},eq2=${eq} -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=7:frameref=4:me=umh:pass=2 -forceidx -nosound -o "$output" "$@"
+mencoder -speed 6006/3000 -ofps 30 -vf "$vf" -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=7:frameref=4:me=umh:pass=2 -forceidx -nosound -o "$output" "$@"
 
 echo "FINISHED"
