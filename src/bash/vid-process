@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+usage="vid-process [options] infile [infile...]
+where options are:
+  -h  -- prints usage message
+  -o output_file -- sets output file
+"
+
+while getopts "ho:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output=$OPTARG
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -n "$output" ]
+then
+  output="out.avi"
+fi
+
+if [ $# -eq 0 ]
+then
+  echo "$usage"
+  exit 1
+fi
+
+crop=1200:600:40:72
+scale=960:480:1:0:0.1:0.75
+bitrate=2400
+denoise=",hqdn3d=2:3:3:4"
+eq="1.1"
+
+echo "PHASE 1"
+mencoder -speed 6006/3000 -ofps 30 -vf softskip,crop=${crop},scale=${scale}${denoise},eq2=${eq} -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=4:frameref=2:me=dia:pass=1 -nosound -o /dev/null "$@"
+
+echo "PHASE 2"
+mencoder -speed 6006/3000 -ofps 30 -vf softskip,crop=${crop},scale=${scale}${denoise},eq2=${eq} -sws 2 -ovc x264 -x264encopts bitrate=${bitrate}:subq=7:frameref=4:me=umh:pass=2 -forceidx -nosound -o "$output" "$@"
+
+echo "FINISHED"
