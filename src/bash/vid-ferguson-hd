@@ -20,9 +20,7 @@ where options are:
      hd-big2 -- -c 1200:600:40:72 # no resize
 "
 
-crop="1200:600:40:72"
-resize="960:480"
-
+# Reading all available options. Their values are passed to the main script via variables.
 
 while getopts "ho:c:r:s:f:b:p:" opt; do
   case "$opt" in
@@ -49,6 +47,7 @@ done
 
 shift $(($OPTIND - 1))
 
+# Handling -p option
 case "$policy" in
   fhd-medium2)
     crop="1600:800:160:216"
@@ -68,6 +67,7 @@ case "$policy" in
     ;;
 esac
 
+# Calling the main script
 vid-process "$@"
 
 if [ -z "$fps" ]
