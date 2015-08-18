@@ -13,9 +13,64 @@ where options are:
   -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
   -r width:height -- final video size, to which the cropped image is resized
   -b bitrate -- values 2000-3000 give good results for 800x600 video size or similar
+  -p spec -- picture size policy; it gives several predefined settings for -c and -r and can be used instead:
+     fhd-medium2 -- -c 1600:800:160:216 -r 960:480
+     hd-medium2 -- -c 1200:600:40:72 -r 960:480
+     fhd-big2 -- -c 1600:800:160:216 -r 1200:600
+     hd-big2 -- -c 1200:600:40:72 # no resize
 "
 
 crop="1200:600:40:72"
 resize="960:480"
 
+
+while getopts "ho:c:r:s:f:b:p:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  c) crop="$OPTARG"
+     ;;
+  r) resize="$OPTARG"
+     ;;
+  s) speed="$OPTARG"
+     ;;
+  f) fps="$OPTARG"
+     ;;
+  b) bitrate="$OPTARG"
+     ;;
+  p) policy="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+case "$policy" in
+  fhd-medium2)
+    crop="1600:800:160:216"
+    resize="960:480"
+    ;;
+  hd-medium2)
+    cop="1200:600:40:72"
+    resize="960:480"
+    ;;
+  fhd-big2)
+    crop="1600:800:160:216"
+    resize="1200:600"
+    ;;
+  hd-big2)
+    crop="1200:600:40:72"
+    resize=""
+    ;;
+esac
+
 vid-process "$@"
+
+if [ -z "$fps" ]
+then
+fps="30"
+fi
