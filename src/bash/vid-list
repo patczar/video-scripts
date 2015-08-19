@@ -6,3 +6,21 @@
 # This script processes a list of video files optionally cutting their fragments
 # and then passes the video chunks to another script (which usually merges them).
 
+usage="vid-list command [options]
+This script reads lines from the standard input,
+each line describes a single video chunk and should be in the following format:
+file [start [length]]
+(square brackets denote optional fragments).
+file is a path to the source video file,
+start and length denote time boundaries, they should be given in an mencoder-accepted format
+(number of seconds is always available).
+The video chunks are passed as arguments to the command together with all the given options.
+"
+
+cmd="$1"
+files=""
+
+while read file start len trash
+do
+  echo "Caught $file $start $len |"
+done
