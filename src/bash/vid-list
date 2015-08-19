@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# This script processes a list of video files optionally cutting their fragments
+# and then passes the video chunks to another script (which usually merges them).
+
