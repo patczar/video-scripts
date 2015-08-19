@@ -18,9 +18,13 @@ The video chunks are passed as arguments to the command together with all the gi
 "
 
 cmd="$1"
+shift
 files=""
 
 while read file start len trash
 do
   echo "Caught $file $start $len |"
+  files="$files $file"
 done
+
+$command "$@" $files
