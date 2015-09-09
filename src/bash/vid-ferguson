@@ -69,23 +69,56 @@ shift $(($OPTIND - 1))
 
 # Handling -p option
 case "$policy" in
-  fhd-medium2)
-    crop="1600:800:160:216"
-    resize="960:480"
-    ;;
-  hd-medium2)
-    cop="1200:600:40:72"
-    resize="960:480"
-    ;;
-  fhd-big2)
-    crop="1600:800:160:216"
+# 2x1
+  fhd-m2)
+    crop="1728:864:96:160"
     resize="1200:600"
     ;;
-  hd-big2)
+  hd-m2)
     crop="1200:600:40:72"
     resize=""
     ;;
+  fhd-s2)
+    crop="1664:832:128:192"
+    resize="960:480"
+    ;;
+  hd-s2)
+    crop="1200:600:40:72"
+    resize="960:480"
+    ;;
+# 16:9
+  fhd-p720)
+    crop="1664:936:128:88"
+    resize="1280x720"
+  ;;
+  hd-p720)
+    crop=""
+    resize=""
+  ;;
+  fhd-p480)
+    crop="1600:900:160:120"
+    #or crop="1536:864:192:160"
+    resize="856x480"
+  ;;
+  hd-p480)
+    crop="1152:648:64:32"
+    resize="856x480"
+  ;;
 esac
+
+# Usable formats (to crop original image).
+# 2:1 :
+# 
+# 1728:864:96:160
+# 1664:832:128:192
+# 1600:900:160:120
+# 1536:864:192:160
+# 1280:640:0:32
+# 1200:600:40:72
+# 1120:560:80:112
+# 1040:520:120:152
+# 960:480:160:192
+
 
 # Handling -x and -F options
 if [ -n "$xspeed" -o -n "$fdrop" ]
