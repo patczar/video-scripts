@@ -11,10 +11,13 @@ where options are:
   -r width:height -- final video size, to which the cropped image is resized
   -s expr -- speed (increased this many times); you can use expressions like 2002/1000
   -f number -- frames per second in the result
+  -q quality -- integer value from 0 to 5; predefined settings of \"quality\",
+     the higher, the better, but the conversion will take more time, and the resulting file may be bigger
   -b number -- assumed output bitrate to be passed to encoder; values 2000-3000 give good results for 800x600 video size or similar; default is 2400
+  -g gamma -- applies gamma correction (e.g. 1.2); default: no correction
 "
 
-while getopts "ho:c:r:s:f:b:" opt; do
+while getopts "ho:c:r:s:f:q:b:g:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -30,7 +33,11 @@ while getopts "ho:c:r:s:f:b:" opt; do
      ;;
   f) fps="$OPTARG"
      ;;
+  q) quality="$OPTARG"
+     ;;
   b) bitrate="$OPTARG"
+     ;;
+  g) gamma="$OPTARG"
      ;;
   esac
 done
@@ -46,11 +53,6 @@ then
 bitrate="2400"
 fi
 
-resize_settings=":1:0:0.1:0.75"
-scale="${resize}${resize_settings}"
-sws=2
-denoise="hqdn3d=2:3:3:4"
-eq="1.1"
 
 if [ $# -eq 0 ]
 then
@@ -70,6 +72,64 @@ speedopts="${speedopts} -ofps $fps"
 fi
 
 
+# Quality settings
+if [ -z "$quality" ]
+then
+quality=3
+fi
+case "$quality" in
+  0)
+    resize_settings=""
+    sws=1
+    denoise=""
+    qopts1=""
+    qopts2=":subq=1:frameref=2:me=dia:weightp=0"
+  ;;
+  1)
+    resize_settings=":0:0:0:0.6"
+    sws=6
+    denoise="denoise3d=3:3:5:5"
+    qopts1=""
+    qopts2=":subq=4:frameref=3:me=hex"
+  ;;
+  2)
+    resize_settings=":0:0:0.1:0.75"
+    sws=2
+    denoise="hqdn3d=2:3:3:4"
+    qopts1=""
+    qopts2=":subq=7:frameref=4:me=umh"
+  ;;
+  3)
+    resize_settings=":0:0:0.1:0.67"
+    sws=2
+    denoise="denoise3d=2:3:4:5"
+    qopts1=":subq=4:frameref=2:me=dia"
+    qopts2=":subq=5:frameref=4:me=hex"
+  ;;
+  4)
+    resize_settings=":0:0:0.05:0.67"
+    sws=2
+    denoise="hqdn3d=2:3:3:4"
+    qopts1=":subq=4:frameref=3:me=dia"
+    qopts2=":subq=8:frameref=5:me=umh"
+  ;;
+  5)
+    resize_settings=":0:0:5"
+    sws=9
+    denoise="hqdn3d=2:3:3:4"
+    qopts1=":subq=6:frameref=3:me=hex"
+    qopts2=":subq=8:frameref=6:me=umh"
+  ;;
+esac
+
+if [ -z "$resize_settings" ]
+then
+resize_settings=":1:0:0.1:0.75"
+fi
+
+scale="${resize}${resize_settings}"
+denoise="hqdn3d=2:3:3:4"
+
 # Video filter flags
 vf="softskip"
 if [ -n "$crop" ]
@@ -84,16 +144,26 @@ if [ -n "$denoise" ]
 then
 vf="$vf,$denoise"
 fi
-if [ -n "$eq" ]
+if [ -n "$gamma" ]
 then
-vf="$vf,eq2=$eq"
+vf="$vf,eq2=$gamma"
 fi
 
-
-echo "PHASE 1"
-mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts bitrate=${bitrate}:subq=4:frameref=2:me=dia:pass=1 -nosound -o /dev/null "$@"
+if [ -n "$qopts1" ]
+then
+  echo "PHASE 1"
+  encopts1="pass=1:bitrate=:${bitrate}${qopts1}"
+  echo mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
+  mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
+fi
 
 echo "PHASE 2"
-mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts bitrate=${bitrate}:subq=7:frameref=4:me=umh:pass=2 -forceidx -nosound -o "$output" "$@"
+if [ -n "$qopts1" ]
+then
+  pass2="pass=2:"
+fi
+encopts2="${pass2}bitrate=${bitrate}${qopts2}"
+echo mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
+mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
 
 echo "FINISHED"

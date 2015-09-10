@@ -6,17 +6,22 @@
 # This script calls vid-process, but first it sets the default image sizes
 # (cropping and scaling) for the Ferguson camera HD recordings.
 
-usage="vid-fergusson-hd [options] infile [infile...]
+usage="vid-fergusson [options] infile [infile...]
 where options are:
   -h  -- prints this usage message
   -o output_file -- sets output file
   -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
   -r width:height -- final video size, to which the cropped image is resized
   -p spec -- picture size policy; it gives several predefined settings for -c and -r and can be used instead:
-     fhd-medium2 -- -c 1600:800:160:216 -r 960:480
-     hd-medium2 -- -c 1200:600:40:72 -r 960:480
-     fhd-big2 -- -c 1600:800:160:216 -r 1200:600
-     hd-big2 -- -c 1200:600:40:72 # no resize
+     fhd-m2 -- -c 1728:864:96:160 -r 1200:600
+     hd-m2 -- -c 1200:600:40:72 # no resize
+     fhd-s2 -- -c 1664:832:128:192 -r 960:480
+     hd-s2 -- -crop -r 960:480
+     fhd-p720 -- -c 1664:936:128:88 -r 1280:720
+     hd-p720 -- # original size kept
+     fhd-p480 -- -c 1600:900:160:120 -r 856:480
+     hd-p480 -- -c 1152:648:64:32 -r 856:480
+  ;;
   -s expr -- speed (increased this many times); you can use expressions like 2002/1000
   -f number -- frames per second in the result
   There is a different way to set speed-related arguments suited for Ferguson camera videos:
@@ -29,14 +34,17 @@ where options are:
      and then the resulting fps is equal to 30 (assuming 29.9 in the source);
      when lower than -x, it will result in a higher fps (e.g. -x 4 -F 2 will give fps 60),
      when higher than -x, it will give a lower fps (e.g. -x 2 -F 4 leads to fps 15)
+  -q quality -- integer value from 0 to 5; predefined settings of \"quality\",
+     the higher, the better, but the conversion will take more time, and the resulting file may be bigger
   -b bitrate -- values 2000-3000 give good results for 800x600 video size or similar  
+  -g gamma -- applies gamma correction (e.g. 1.2); default: no correction
 "
 
 # Reading all available options. Their values are passed to the main script via variables.
 
 mult=1
 
-while getopts "ho:c:r:p:s:f:x:3F:b:" opt; do
+while getopts "ho:c:r:p:s:f:x:3F:q:b:g:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -60,7 +68,11 @@ while getopts "ho:c:r:p:s:f:x:3F:b:" opt; do
      ;;
   F) fdrop="$OPTARG"
      ;;
+  q) quality="$OPTARG"
+     ;;
   b) bitrate="$OPTARG"
+     ;;
+  g) gamma="$OPTARG"
      ;;
   esac
 done
@@ -89,7 +101,7 @@ case "$policy" in
 # 16:9
   fhd-p720)
     crop="1664:936:128:88"
-    resize="1280x720"
+    resize="1280:720"
   ;;
   hd-p720)
     crop=""
@@ -98,11 +110,11 @@ case "$policy" in
   fhd-p480)
     crop="1600:900:160:120"
     #or crop="1536:864:192:160"
-    resize="856x480"
+    resize="856:480"
   ;;
   hd-p480)
     crop="1152:648:64:32"
-    resize="856x480"
+    resize="856:480"
   ;;
 esac
 
@@ -137,5 +149,7 @@ fi
 # echo "speed = $speed"
 # echo "fps = $fps"
 
+
 # Calling the main script
+export output crop resize speed fps bitrate gamma resize_settings quality
 vid-process "$@"
