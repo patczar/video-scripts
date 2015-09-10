@@ -48,10 +48,6 @@ if [ -z "$output" ]
 then
 output="out.avi"
 fi
-if [ -z "$bitrate" ]
-then
-bitrate="2400"
-fi
 
 
 if [ $# -eq 0 ]
@@ -73,6 +69,17 @@ fi
 
 
 # Quality settings
+# base_bitrate is the bitrate per each 100x100 pixels block
+# The actual bitrate is computer proportionally to the field size of the image,
+# plus $bitrate_constant_field (to slightly enhance the quality of smallest videos)
+bitrate_constant_field=8
+
+# Bitrate is specified for fps=30. If fps is differet,
+# how much should it impact on the bitrate?
+# 0.0 - no impact, 1.0 - bitrate is straightly proportional to fps.
+# Practically, the values should be lower than 1.0.
+bitrate_fps_impact=0.5
+
 if [ -z "$quality" ]
 then
 quality=3
@@ -84,6 +91,7 @@ case "$quality" in
     denoise=""
     qopts1=""
     qopts2=":subq=1:frameref=2:me=dia:weightp=0"
+    base_bitrate=30
   ;;
   1)
     resize_settings=":0:0:0:0.6"
@@ -91,6 +99,7 @@ case "$quality" in
     denoise="denoise3d=3:3:5:5"
     qopts1=""
     qopts2=":subq=4:frameref=3:me=hex"
+    base_bitrate=35
   ;;
   2)
     resize_settings=":0:0:0.1:0.75"
@@ -98,6 +107,7 @@ case "$quality" in
     denoise="hqdn3d=2:3:3:4"
     qopts1=""
     qopts2=":subq=7:frameref=4:me=umh"
+    base_bitrate=40
   ;;
   3)
     resize_settings=":0:0:0.1:0.67"
@@ -105,6 +115,7 @@ case "$quality" in
     denoise="denoise3d=2:3:4:5"
     qopts1=":subq=4:frameref=2:me=dia"
     qopts2=":subq=5:frameref=4:me=hex"
+    base_bitrate=60
   ;;
   4)
     resize_settings=":0:0:0.05:0.67"
@@ -112,6 +123,7 @@ case "$quality" in
     denoise="hqdn3d=2:3:3:4"
     qopts1=":subq=4:frameref=3:me=dia"
     qopts2=":subq=8:frameref=5:me=umh"
+    base_bitrate=75
   ;;
   5)
     resize_settings=":0:0:5"
@@ -119,8 +131,23 @@ case "$quality" in
     denoise="hqdn3d=2:3:3:4"
     qopts1=":subq=6:frameref=3:me=hex"
     qopts2=":subq=8:frameref=6:me=umh"
+    base_bitrate=100
   ;;
 esac
+
+# setting default bitrate based on the quality and the size
+if [ -z "$bitrate" -a -n "$resize" ]
+then
+  w=`echo $resize | cut -d : -f 1`
+  h=`echo $resize | cut -d : -f 2`
+  field=$(( $w * $h / 10000 ))
+  bitrate=$(( $base_bitrate * ( $field + $bitrate_constant_field )))
+  if [ -n "$fps" -a "$fps" -ne 30 ]
+  then
+    bitrate=`bc -l <<<  "(1.0 + $bitrate_fps_impact * ($fps - 30) / 30) * $bitrate"`
+    bitrate=`echo $bitrate | cut -d . -f 1`
+  fi
+fi
 
 if [ -z "$resize_settings" ]
 then
@@ -128,7 +155,6 @@ resize_settings=":1:0:0.1:0.75"
 fi
 
 scale="${resize}${resize_settings}"
-denoise="hqdn3d=2:3:3:4"
 
 # Video filter flags
 vf="softskip"
@@ -149,10 +175,22 @@ then
 vf="$vf,eq2=$gamma"
 fi
 
+echo "Settings:"
+echo " quality = $quality"
+echo " crop = $crop"
+echo " resize = $resize"
+echo " gamma = $gamma"
+echo " fps = $fps"
+echo " bitrate = $bitrate"
+
 if [ -n "$qopts1" ]
 then
   echo "PHASE 1"
-  encopts1="pass=1:bitrate=${bitrate}${qopts1}"
+  encopts1="pass=1${qopts1}"
+  if [ -n $bitrate ]
+  then
+    encopts1="$encopts1:bitrate=${bitrate}"
+  fi
   echo mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
   mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
 fi
@@ -160,9 +198,14 @@ fi
 echo "PHASE 2"
 if [ -n "$qopts1" ]
 then
-  pass2="pass=2:"
+  encopts2="pass=2:${qopts2}"
+else
+  encopts2="${qopts2}"
 fi
-encopts2="${pass2}bitrate=${bitrate}${qopts2}"
+if [ -n $bitrate ]
+then
+  encopts2="$encopts2:bitrate=${bitrate}"
+fi
 echo mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
 mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
 

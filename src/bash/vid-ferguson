@@ -88,7 +88,7 @@ case "$policy" in
     ;;
   hd-m2)
     crop="1200:600:40:72"
-    resize=""
+    resize="1200:600"
     ;;
   fhd-s2)
     crop="1664:832:128:192"
@@ -105,7 +105,7 @@ case "$policy" in
   ;;
   hd-p720)
     crop=""
-    resize=""
+    resize="1280:720"
   ;;
   fhd-p480)
     crop="1600:900:160:120"
