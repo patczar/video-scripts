@@ -17,8 +17,8 @@ start and length denote time boundaries, they should be given in an mencoder-acc
 The video chunks are passed as arguments to the command together with all the given options.
 "
 
-tmpdir=.
-# tmpdir=/tmp
+#tmpdir=.
+tmpdir=/tmp
 
 cmd="$1"
 shift
@@ -34,11 +34,13 @@ do
     files="$files $file"
   else
     opts=" -nosound -ovc copy -ss $start"
-    if [ -n $len ]
-    then opts="$opts -endpos $len"
+    if [ -n "$len" ]
+    then
+      opts="$opts -endpos $len"
     fi
     tmpfile=`printf "%s/chunk%03d.avi" $tmpdir $n`
     echo "Cutting a chunk from $file into $tmpfile"
+    echo mencoder $opts -o "$tmpfile" "$file"
     mencoder $opts -o "$tmpfile" "$file"
     files="$files $tmpfile"
     tmpfiles="$tmpfiles $tmpfile"
@@ -46,7 +48,7 @@ do
 done
 
 echo "Processing files $files"
-
+echo $cmd "$@" $files
 $cmd "$@" $files
 
 echo "Deleting temporary files $tmpfiles"

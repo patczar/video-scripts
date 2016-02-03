@@ -21,7 +21,6 @@ where options are:
      hd-p720 -- # original size kept
      fhd-p480 -- -c 1600:900:160:120 -r 856:480
      hd-p480 -- -c 1152:648:64:32 -r 856:480
-  ;;
   -s expr -- speed (increased this many times); you can use expressions like 2002/1000
   -f number -- frames per second in the result
   There is a different way to set speed-related arguments suited for Ferguson camera videos:
