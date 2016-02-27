@@ -18,7 +18,8 @@ The video chunks are passed as arguments to the command together with all the gi
 "
 
 #tmpdir=.
-tmpdir=/tmp
+#tmpdir=/tmp
+tmpdir=~/ext/tmp
 
 cmd="$1"
 shift
