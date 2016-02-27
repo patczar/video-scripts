@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# This script processes a list of video files (optionally cutting their fragments)
+# with the same or different settings, and finally merges all the result files into one.
+# It is similar to vid-list script, but:
+# - this script allows you to pass different settings for subsequent chynks (e.g. different gamma correction is very useful),
+# - it is more (temporary) disk space comsuming, as all resulting chunks have to be written.
+
+usage="vid-multi [final_options] command [common_options]
+Where final_options includes:
+-o file -- final result file name
+-T path -- path to temp directory
+and common_options are passed to each invocation of command.
+This script reads lines from the standard input,
+each line describes production of a single video chunk and should be in the following format:
+[options] file [file ...]
+(square brackets denote optional fragments).
+file is a path to the source video file, more than one file can be given in a single line,
+but (due to mplayer) time boundaries for cutting of fragments would be applied
+to all files, so usually if you want to cut a fragment, you will provide a separate line with only one file for it.
+"
+
+while getopts "ho:T:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) final_output="$OPTARG"
+     ;;
+  T) tmpdir="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -z "$final_output" ]
+then
+$final_output=out.avi
+fi
+
+if [ -z "$tmpdir" ]
+then
+#tmpdir=.
+tmpdir=/tmp
+fi
+
+cmd="$1"
+shift
+chunks=""
+n=0
+
+while read line
+do
+  n=$(($n + 1))
+  chunk=`printf "%s/chunk%03d.avi" $tmpdir $n`
+  chunks="$chunks $chunk"
+  printf "Processing chunk %03d\n" $n
+  echo $cmd -o "$chunk" "$@" $line
+  $cmd -o "$chunk" "$@" $line
+done
+
+echo ""
+echo "MERGING $n chunks into $final_output"
+mencoder -oac copy -ovc copy -forceidx -o "$final_output" $chunks
+
+echo "Deleting temporary files $chunks"
+rm -f $chunks
+echo "FINISHED"
