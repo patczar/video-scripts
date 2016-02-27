@@ -22,7 +22,7 @@ where options are:
 
 quality_driver="R"
 
-while getopts "ho:c:r:s:f:q:BRb:a:g:" opt; do
+while getopts "ho:c:r:s:f:q:BRb:a:g:t:T:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -49,6 +49,10 @@ while getopts "ho:c:r:s:f:q:BRb:a:g:" opt; do
   a) crf="$OPTARG"
      ;;
   g) gamma="$OPTARG"
+     ;;
+  t) start_time="$OPTARG"
+     ;;
+  T) end_time="$OPTARG"
      ;;
   esac
 done
@@ -77,6 +81,33 @@ if [ -n "$fps" ]
 then
 speedopts="${speedopts} -ofps $fps"
 fi
+
+# Fragment cutting options
+timeopts=""
+if [ -n "$start_time" ]
+then
+  timeopts="$timeopts -ss $start_time"
+fi
+if [ -n "$end_time" ]
+then
+  if [ -n "$start_time" ]
+  then
+    sta="$start_time"
+  else
+    sta=0
+  fi
+  if [ -n "$speed" ]
+  then
+    spe="$speed"
+  else
+    spe=1
+  fi
+
+  endpos=`echo "( $end_time - $sta ) / ( $spe )" | bc`
+
+  timeopts="$timeopts -endpos $endpos"
+fi
+
 
 
 # Quality settings
@@ -223,8 +254,8 @@ then
   then
     encopts1="$encopts1:bitrate=${bitrate}"
   fi
-  echo mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
-  nice -n 5 mencoder $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
+  echo mencoder $speedopts $timeopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
+  nice -n 5 mencoder $speedopts $timeopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts1" -nosound -o /dev/null "$@"
 fi
 
 echo "PHASE 2"
@@ -242,7 +273,7 @@ if [ -n ${crf} ]
 then
   encopts2="$encopts2:crf=${crf}"
 fi
-echo mencoder -quiet $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
-nice -n 5 mencoder -quiet $speedopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
+echo mencoder -quiet $speedopts $timeopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
+nice -n 5 mencoder -quiet $speedopts $timeopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts2" -forceidx -nosound -o "$output" "$@"
 
 echo "FINISHED"
