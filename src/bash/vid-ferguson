@@ -35,7 +35,10 @@ where options are:
      when higher than -x, it will give a lower fps (e.g. -x 2 -F 4 leads to fps 15)
   -q quality -- integer value from 0 to 5; predefined settings of \"quality\",
      the higher, the better, but the conversion will take more time, and the resulting file may be bigger
-  -b bitrate -- values 2000-3000 give good results for 800x600 video size or similar  
+  -B -- use the 'specified bitrate' policy when setting the quality
+  -R -- use the 'crf' (constant rate factor, which in fact means constant perceived quality) policy; this is default.
+  -b number -- assumed output bitrate to be passed to encoder
+  -a number -- crf value; for x264 encoder use values between 1 (hihgest quality) and 50 (lowest quality); if unsusre, start with 20
   -g gamma -- applies gamma correction (e.g. 1.2); default: no correction
   Options allowing to cut a fragment of the video:
   -t time -- start time (in sec, floats allowed)
@@ -46,7 +49,7 @@ where options are:
 
 mult=1
 
-while getopts "ho:c:r:p:s:f:x:3F:q:b:g:t:T:" opt; do
+while getopts "ho:c:r:p:s:f:x:3F:q:BRb:a:g:t:T:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -72,7 +75,13 @@ while getopts "ho:c:r:p:s:f:x:3F:q:b:g:t:T:" opt; do
      ;;
   q) quality="$OPTARG"
      ;;
+  B) quality_driver="B"
+     ;;
+  R) quality_driver="R"
+     ;;
   b) bitrate="$OPTARG"
+     ;;
+  a) crf="$OPTARG"
      ;;
   g) gamma="$OPTARG"
      ;;
@@ -157,5 +166,5 @@ fi
 
 
 # Calling the main script
-export output crop resize speed fps bitrate gamma resize_settings quality start_time end_time
+export output crop resize speed fps bitrate gamma resize_settings quality quality_driver crf start_time end_time
 vid-process "$@"

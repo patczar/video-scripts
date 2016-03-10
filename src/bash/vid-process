@@ -21,6 +21,7 @@ where options are:
 "
 
 quality_driver="R"
+gamma_strength=0.67
 
 while getopts "ho:c:r:s:f:q:BRb:a:g:t:T:" opt; do
   case "$opt" in
@@ -63,7 +64,6 @@ if [ -z "$output" ]
 then
 output="out.avi"
 fi
-
 
 if [ $# -eq 0 ]
 then
@@ -192,7 +192,7 @@ case "$quality" in
   ;;
 esac
 
-if [ "$quality_driver" = "R" ]
+if [ "$quality_driver" = "R" -a -z "$crf" ]
 then
   crf="$qcrf"
 fi
@@ -234,7 +234,7 @@ vf="$vf,$denoise"
 fi
 if [ -n "$gamma" ]
 then
-vf="$vf,eq2=$gamma:1.0:0:1.0:$gamma:$gamma:$gamma:0.5"
+vf="$vf,eq2=$gamma:1.0:0:1.0:$gamma:$gamma:$gamma:$gamma_strength"
 fi
 
 echo "Settings:"
