@@ -9,6 +9,7 @@ where options are:
   -o output_file -- sets output file
   -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
   -r width:height -- final video size, to which the cropped image is resized
+  -e width:height[:x:y] -- expands the size (after cropping and scaling); refer to mplayer docs for details
   -s expr -- speed (increased this many times); you can use expressions like 2002/1000
   -f number -- frames per second in the result
   -q quality -- integer value from 0 to 6; predefined settings of \"quality\",
@@ -23,7 +24,7 @@ where options are:
 quality_driver="R"
 gamma_strength=0.67
 
-while getopts "ho:c:r:s:f:q:BRb:a:g:t:T:" opt; do
+while getopts "ho:c:r:e:s:f:q:BRb:a:g:t:T:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -34,6 +35,8 @@ while getopts "ho:c:r:s:f:q:BRb:a:g:t:T:" opt; do
   c) crop="$OPTARG"
      ;;
   r) resize="$OPTARG"
+     ;;
+  e) expand="$OPTARG"
      ;;
   s) speed="$OPTARG"
      ;;
@@ -228,6 +231,10 @@ if [ -n "$resize" ]
 then
 vf="$vf,scale=$resize$resize_settings"
 fi
+if [ -n "$expand" ]
+then
+vf="$vf,expand=$expand"
+fi
 if [ -n "$denoise" ]
 then
 vf="$vf,$denoise"
@@ -241,6 +248,7 @@ echo "Settings:"
 echo " quality = $quality"
 echo " crop = $crop"
 echo " resize = $resize"
+echo " expand = $expand"
 echo " gamma = $gamma"
 echo " fps = $fps"
 echo " bitrate = $bitrate"

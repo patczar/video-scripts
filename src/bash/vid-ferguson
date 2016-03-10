@@ -12,6 +12,7 @@ where options are:
   -o output_file -- sets output file
   -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
   -r width:height -- final video size, to which the cropped image is resized
+  -e width:height[:x:y] -- expands the size (after cropping and scaling); refer to mplayer docs for details
   -p spec -- picture size policy; it gives several predefined settings for -c and -r and can be used instead:
      fhd-m2 -- -c 1728:864:96:160 -r 1200:600
      hd-m2 -- -c 1200:600:40:72 # no resize
@@ -21,6 +22,8 @@ where options are:
      hd-p720 -- # original size kept
      fhd-p480 -- -c 1600:900:160:120 -r 856:480
      hd-p480 -- -c 1152:648:64:32 -r 856:480
+     fhd-e720 -- -c 1920:996:0:24 -r 1280:664 -e 0:-56:0:0 # result size is 1280x720
+     hd-e720 -- -c 1280:664:0:16 -e 0:-56:0:0 # result size is 1280x720
   -s expr -- speed (increased this many times); you can use expressions like 2002/1000
   -f number -- frames per second in the result
   There is a different way to set speed-related arguments suited for Ferguson camera videos:
@@ -49,7 +52,7 @@ where options are:
 
 mult=1
 
-while getopts "ho:c:r:p:s:f:x:3F:q:BRb:a:g:t:T:" opt; do
+while getopts "ho:c:r:e:p:s:f:x:3F:q:BRb:a:g:t:T:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -60,6 +63,8 @@ while getopts "ho:c:r:p:s:f:x:3F:q:BRb:a:g:t:T:" opt; do
   c) crop="$OPTARG"
      ;;
   r) resize="$OPTARG"
+     ;;
+  e) expand="$OPTARG"
      ;;
   p) policy="$OPTARG"
      ;;
@@ -131,6 +136,16 @@ case "$policy" in
     crop="1152:648:64:32"
     resize="856:480"
   ;;
+  fhd-e720)
+    crop="1760:913:80:104"
+    resize="1280:664"
+    expand="0:-56:0:0"
+  ;;
+  hd-e720)
+    crop="1280:664:0:16"
+    resize=""
+    expand="0:-56:0:0"
+  ;;
 esac
 
 # Usable formats (to crop original image).
@@ -166,5 +181,5 @@ fi
 
 
 # Calling the main script
-export output crop resize speed fps bitrate gamma resize_settings quality quality_driver crf start_time end_time
+export output crop resize expand speed fps bitrate gamma resize_settings quality quality_driver crf start_time end_time
 vid-process "$@"
