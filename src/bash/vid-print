@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# This script creates an image containing a text.
+
+usage="vid-print [options]
+where options are:
+  -h  -- prints this usage message
+  -o output_file -- sets output file
+  -m message -- the message to be printed
+  -s WidthxHeight -- the size of the result image
+  -l x,y -- location of the text; defaults to 5:5
+  -f font_name -- font family name; defaults to 'Arial'
+  -F size -- point size of the font; defaults to 40
+  
+Most of the options are passed to ImageMagick convert tool and the appriopriate syntax apply.
+"
+
+while getopts "ho:m:s:l:f:F:c:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  m) message="$OPTARG"
+     ;;
+  s) size="$OPTARG"
+     ;;
+  l) loc="$OPTARG"
+     ;;
+  f) font="$OPTARG"
+     ;;
+  F) fontsize="$OPTARG"
+     ;;
+  c) color="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -z "$loc" ]
+then loc="5,5"
+fi
+if [ -z "$font" ]
+then font="Arial"
+fi
+if [ -z "$fontsize" ]
+then fontsize="40"
+fi
+if [ -z "$color" ]
+then color="blue"
+fi
+
+echo convert -size "$size" canvas:none -gravity SouthWest -font "$font" -pointsize "$fontsize" -fill "$color" -draw "text $loc '$message'" "$output"
+convert -size "$size" canvas:none -gravity SouthWest -font "$font" -pointsize "$fontsize" -fill "$color" -draw "text $loc '$message'" "$output"
