@@ -219,8 +219,6 @@ then
 resize_settings=":1:0:0.1:0.75"
 fi
 
-scale="${resize}${resize_settings}"
-
 # Video filter flags
 vf="softskip"
 if [ -n "$crop" ]
