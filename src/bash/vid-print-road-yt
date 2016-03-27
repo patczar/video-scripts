@@ -1,0 +1,159 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# This script creates an image containing some texts, used on my road records.
+
+usage="vid-print-road-yt [options]
+where options are:
+  -h  -- prints this usage message
+  -o output_file -- sets output file
+  -R color -- the color of the road number, depending on the road category. Defaults to white.
+  In Poland we mark state (national) roads with red, voyevodship (district) roads with yellow, motorways with blue...
+Texts to be printed. All optional:
+  -r -- road number
+  -p -- place (city, town, etc.)
+  -m -- normal message
+  -M -- emphased message
+  -n -- normal message (second line)
+  -N -- emphased message (second line)
+  -x -- speed (of playback, e.g. 'x4')
+"
+
+while getopts "ho:R:r:p:m:M:n:N:x:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  R) road_color="$OPTARG"
+     ;;
+  r) road="$OPTARG"
+     ;;
+  p) place="$OPTARG"
+     ;;
+  m) message="$OPTARG"
+     ;;
+  M) emessage="$OPTARG"
+     ;;
+  n) message2="$OPTARG"
+     ;;
+  N) emessage2="$OPTARG"
+     ;;
+  x) x="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+# Use none for transparent background
+background=none
+#background=black
+
+# This is the room left on the bottom of videos processed with e720 setting of my other script.
+size=1280x56
+
+if [ -z "$road_color" ]
+then road_color=white
+fi
+
+#TODO refactor somehow to avoid code duplication...
+
+# Settings for particular texts.
+# r - usually used for the number of road
+r_font="DejaVu-Sans-Bold"
+r_size=40
+r_color="$road_color"
+r_loc=20,6
+
+# p - usually used for the name of the town or other location
+p_font="DejaVu-Sans-Condensed"
+p_size=32
+p_color=lightgreen
+p_loc=160,8
+
+# m - usually used for comments on the action
+m_font="DejaVu-Sans-Condensed"
+m_size=22
+m_color=white
+m_loc=500,30
+
+# M - usually used for emphased comments on the action (near to accident etc.)
+M_font="DejaVu-Sans-Condensed"
+M_size=22
+M_color=red
+M_loc=500,30
+
+# n - usually used for comments on the action (2nd line)
+n_font="DejaVu-Sans-Condensed"
+n_size=22
+n_color=white
+n_loc=500,4
+
+# n - usually used for emphased comments on the action (2nd line)
+N_font="DejaVu-Sans-Condensed"
+N_size=22
+N_color=red
+N_loc=500,4
+
+# x - usually used for playback speec indication
+x_font="DejaVu-Sans"
+x_size=32
+x_color=grey
+x_loc=1200,8
+
+declare -a cmd
+
+function add_to_cmd() {
+	for arg in "$@"
+	do cmd+=("$arg")
+	done
+}
+
+
+add_to_cmd convert -size $size canvas:"$background" -gravity SouthWest
+
+if [ -n "$road" ]
+then
+  add_to_cmd -font "$r_font" -pointsize "$r_size" -fill "$r_color" -draw "text $r_loc '$road'"
+fi
+
+if [ -n "$place" ]
+then
+  add_to_cmd -font "$p_font" -pointsize "$p_size" -fill "$p_color" -draw "text $p_loc '$place'"
+fi
+
+if [ -n "$message" ]
+then
+  add_to_cmd -font "$m_font" -pointsize "$m_size" -fill "$m_color" -draw "text $m_loc '$message'"
+fi
+
+if [ -n "$emessage" ]
+then
+  add_to_cmd -font "$M_font" -pointsize "$M_size" -fill "$M_color" -draw "text $M_loc '$emessage'"
+fi
+
+if [ -n "$message2" ]
+then
+  add_to_cmd -font "$n_font" -pointsize "$n_size" -fill "$n_color" -draw "text $n_loc '$message2'"
+fi
+
+if [ -n "$emessage2" ]
+then
+  add_to_cmd -font "$N_font" -pointsize "$N_size" -fill "$N_color" -draw "text $N_loc '$emessage2'"
+fi
+
+if [ -n "$x" ]
+then
+  add_to_cmd -font "$x_font" -pointsize "$x_size" -fill "$x_color" -draw "text $x_loc '$x'"
+fi
+
+add_to_cmd "$output"
+
+#showargs "${cmd[@]}"
+echo "${cmd[@]}"
+"${cmd[@]}"
