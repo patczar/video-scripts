@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+usage="vid-show-rect [options] infile
+Shows a video after applying some filters.
+Available options are
+  -h  -- prints usage message
+  -r crop_spec -- shows a rectangle aroung the given crop area
+  -c crop_spec -- actually crops the given area
+  -s size_spec -- resized the final image to the given size
+"
+
+while getopts "hr:c:s:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  r) rect="$OPTARG"
+     ;;
+  c) crop="$OPTARG"
+     ;;
+  s) scale="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+filter=null
+
+if [ -n "$rect" ]
+then
+filter="$filter,drawbox=$rect:c=red:t=2"
+fi
+
+if [ -n "$crop" ]
+then
+filter="$filter,crop=$crop"
+fi
+
+if [ -n "$scale" ]
+then
+filter="$filter,scale=$scale"
+fi
+
+if [ -n "$padding" ]
+then
+filter="$filter,padding=$padding"
+fi
+
+command="ffplay -vf $filter $@"
+
+echo $command
+
+$command
+
