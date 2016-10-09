@@ -1,0 +1,255 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+usage="vid-process [options] infile [infile...]
+where options are:
+  -h  -- prints usage message
+  -o output_file -- sets output file
+  -q quality -- passed as CRF option to ffmpeg (\"constant quality\", variable bitrate depending on image details, reasonable values for me are between 20 (high) and 30 (low))
+  -Q N -- encoding quality / encoding time tradeoff; supported values are from 1 to 5, the higher the slower = better quality. Default 4.
+  -x N -- drop frames to increase speed;
+      every Nth frame is kept, the rest is lost.
+      If the framerate is not changed, it means N time increase of the video speed.
+      If fps is changed (-f option), the speed depends on those 2 factors.
+  -f fps - the result frame rate (frames per second).
+  -g gamma -- applies gamma correction (e.g. 1.2); default: no correction;
+      gamma_strength variable has an impact on this
+  -n N -- apply denoise filter with the given strength
+  -s input_size -- Ambarella formats: a1920 a2304 a2560
+                   Ferguson formats: f1920 f1280
+  -S output_size -- s2 (960:480) m2 (1200:600)
+                    l2 (1440:720) x2 (1920:960)
+                    m7 (1280:560) x7 (1920:840)
+                    y480 y720 y1080 (YouTube without text bar)
+                    t480 t720 t1080 (YouTube with text bar)
+"
+
+# Default values
+Q=4
+crf="23"
+
+# Other settings
+private_codec=libx265
+#private_codec=libx264
+yt_codec=libx264
+
+scalling_algorithm=lanczos
+#scalling_algorithm=bicubic
+
+if [ -z "$gamma_strength" ]
+then
+    gamma_strength=0.67
+fi
+
+while getopts "ho:x:f:g:s:S:q:Q:n:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  x) speed="$OPTARG"
+     ;;
+  f) fps="$OPTARG"
+     ;;
+  g) gamma="$OPTARG"
+     ;;
+  s) isize="$OPTARG"
+     ;;
+  S) osize="$OPTARG"
+     ;;
+  q) crf="$OPTARG"
+     ;;
+  Q) Q="$OPTARG"
+     ;;
+  n) dn="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -z "$output" ]
+then
+output="out.mp4"
+fi
+
+case "$isize@$osize" in
+  (f1920@x2)
+    cam=ferguson
+    crop=
+    scale=
+  ;;
+  (f1920@m2)
+    cam=ferguson
+    crop="w=1728:h=864:x=96:y=160"
+    scale="w=1200:h=600"
+  ;;
+  (f1280@m2)
+    cam=ferguson
+    crop="w=1200:h=600:x=40:y=72"
+    scale=
+  ;;
+  (f1920@s2)
+    cam=ferguson
+    crop="w=1664:h=832:x=128:y=192"
+    scale="w=960:h=480"
+  ;;
+  (f1280@s2)
+    cam=ferguson
+    crop="w=1200:h=600:x=40:y=72"
+    scale="w=960:h=480"
+  ;;
+  (f1920@y720)
+    cam=ferguson
+    crop="w=1664:h=936:x=128:y=88"
+    scale="w=1280:h=720"
+    youtube=1
+  ;;
+  (f1280@y720)
+    cam=ferguson
+    crop=
+    scale=
+    youtube=1
+  ;;
+  (f1920@t720)
+    cam=ferguson
+    crop="w=1920:h=996:x=0:y=24"
+    scale="w=1280:h=664"
+    padding="w=1280:h=720:y=0"
+    youtube=1
+  ;;
+  (f1280@t720)
+    cam=ferguson
+    crop="w=1280:h=664:x=0:y=16"
+    scale=
+    padding="w=1280:h=720:y=0"
+    youtube=1
+  ;;
+  (a2304@x2)
+    cam=a7810
+    crop="w=2304:h=1152:x=0:y=64"
+    scale="w=1920:h=960"
+  ;;
+  (a2560@x7)
+    cam=a7810
+    crop="w=2432:h=1064:y=0"
+    scale="w=1920:h=840"
+  ;;
+  (a2560@y720)
+    cam=a7810
+    crop="w=2368:h=1080:x=96:y=0"
+    padding="w=2368:h=1332:y=0"
+    scale="w=1280:h=720"
+    youtube=1
+  ;;
+  (*)
+    echo "Unsupported input / output size combination"
+    exit 1
+esac
+
+pts=PTS
+if [ -n "$fps" ]
+then
+  tb="1/$fps"
+  pts="N"
+fi
+if [ -n "$speed" ]
+then
+  pts="${pts}/${speed}"
+fi
+
+case $Q in
+  (1) preset=veryfast
+    sws_flags=fast_bilinear
+  ;;
+  (2) preset=fast
+    sws_flags=bilinear
+  ;;
+  (3) preset=medium
+    sws_flags=bicublin
+  ;;
+  (4) preset=slow
+    sws_flags=$scalling_algorithm
+  ;;
+  (5) preset=slower
+    sws_flags=$scalling_algorithm
+  ;;
+esac
+
+export FFREPORT="file=ffreport_%t.log:level=32"
+
+
+command="ffmpeg -noaccurate_seek -y"
+n=0
+while read file opts
+do
+  n=$(($n + 1))
+  command="$command $opts -i $file"
+done
+
+filter="concat=n=$n"
+
+if [ -n "$tb" ]
+then
+filter="$filter,settb=$tb"
+fi
+
+if [ -n "$pts" ]
+then
+filter="$filter,setpts=$pts"
+fi
+
+if [ -n "$speed" ]
+then
+filter="$filter,framestep=$speed"
+fi
+
+if [ -n "$crop" ]
+then
+filter="$filter,crop=$crop"
+fi
+
+if [ -n "$scale" ]
+then
+filter="$filter,scale=$scale:flags=$sws_flags"
+fi
+
+if [ -n "$dn" -a "$dn" != 0 ]
+then
+filter="$filter,hqdn3d=$dn"
+fi
+
+if [ -n "$gamma" ]
+then
+eq="gamma=$gamma:gamma_weight=$gamma_strength"
+fi
+
+if [ -n "$eq" ]
+then
+filter="$filter,eq=$eq"
+fi
+
+if [ -n "$padding" ]
+then
+filter="$filter,padding=$padding"
+fi
+
+
+if [ "$youtube" = "1" ]
+then
+codec=$yt_codec
+else
+codec=$private_codec
+fi
+
+codec="$codec -preset $preset -crf $crf"
+
+command="$command -r $fps -an -filter_complex $filter -c:v $codec $output"
+
+echo $command
+
+$command
