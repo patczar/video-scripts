@@ -3,20 +3,25 @@
 # (c) Patryk Czarnik
 # Distributed under MIT License. See LICENCE file in the root directory for details.
 
-usage="vid-process [options] infile [infile...]
+usage="vid-process [options]
 where options are:
   -h  -- prints usage message
   -o output_file -- sets output file
+  -i file -- input specification file, in the format of ffmpeg concat demuxer
+  -d codec -- which codec to use. 4 means h264, 5 means h265
   -q quality -- passed as CRF option to ffmpeg (\"constant quality\", variable bitrate depending on image details, reasonable values for me are between 20 (high) and 30 (low))
   -Q N -- encoding quality / encoding time tradeoff; supported values are from 1 to 5, the higher the slower = better quality. Default 4.
+  -B bitrate -- maximum local bitrate
   -x N -- drop frames to increase speed;
       every Nth frame is kept, the rest is lost.
       If the framerate is not changed, it means N time increase of the video speed.
       If fps is changed (-f option), the speed depends on those 2 factors.
-  -f fps - the result frame rate (frames per second).
+  -f fps -- the result frame rate (frames per second).
+  -e eq_spec -- specifies the eq filter; if -g is also given, gamma spec is appended to this one
   -g gamma -- applies gamma correction (e.g. 1.2); default: no correction;
       gamma_strength variable has an impact on this
   -n N -- apply denoise filter with the given strength
+  -F file -- additional filters spec to be read from file
   -s input_size -- Ambarella formats: a1920 a2304 a2560
                    Ferguson formats: f1920 f1280
   -S output_size -- s2 (960:480) m2 (1200:600)
@@ -29,11 +34,12 @@ where options are:
 # Default values
 Q=4
 crf="23"
+nice=6
 
 # Other settings
 private_codec=libx265
 #private_codec=libx264
-yt_codec=libx264
+yt_codec="libx264 -profile high -bf 2 -g 15 -coder ac"
 
 scalling_algorithm=lanczos
 #scalling_algorithm=bicubic
@@ -43,7 +49,7 @@ then
     gamma_strength=0.67
 fi
 
-while getopts "ho:x:f:g:s:S:q:Q:n:" opt; do
+while getopts "ho:i:d:x:f:e:g:F:s:S:q:Q:B:n:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -51,11 +57,19 @@ while getopts "ho:x:f:g:s:S:q:Q:n:" opt; do
      ;;
   o) output="$OPTARG"
      ;;
+  i) input="$OPTARG"
+     ;;
+  d) codec="$OPTARG"
+     ;;
   x) speed="$OPTARG"
      ;;
   f) fps="$OPTARG"
      ;;
   g) gamma="$OPTARG"
+     ;;
+  e) eq="$OPTARG"
+     ;;
+  F) filter_file="$OPTARG"
      ;;
   s) isize="$OPTARG"
      ;;
@@ -64,6 +78,8 @@ while getopts "ho:x:f:g:s:S:q:Q:n:" opt; do
   q) crf="$OPTARG"
      ;;
   Q) Q="$OPTARG"
+     ;;
+  B) maxbitrate="$OPTARG"
      ;;
   n) dn="$OPTARG"
      ;;
@@ -80,7 +96,7 @@ fi
 case "$isize@$osize" in
   (f1920@x2)
     cam=ferguson
-    crop=
+    crop="w=1920:h=960:x=0:y=64"
     scale=
   ;;
   (f1920@m2)
@@ -180,18 +196,9 @@ case $Q in
   ;;
 esac
 
-export FFREPORT="file=ffreport_%t.log:level=32"
+export FFREPORT="file=${output%.*}.log:level=32"
 
-
-command="ffmpeg -noaccurate_seek -y"
-n=0
-while read file opts
-do
-  n=$(($n + 1))
-  command="$command $opts -i $file"
-done
-
-filter="concat=n=$n"
+filter=null
 
 if [ -n "$tb" ]
 then
@@ -223,9 +230,14 @@ then
 filter="$filter,hqdn3d=$dn"
 fi
 
+if [ -n "$eq" -a -n "$gamma" ]
+then
+eq="${eq}:"
+fi
+
 if [ -n "$gamma" ]
 then
-eq="gamma=$gamma:gamma_weight=$gamma_strength"
+eq="${eq}gamma=$gamma:gamma_weight=$gamma_strength"
 fi
 
 if [ -n "$eq" ]
@@ -235,21 +247,38 @@ fi
 
 if [ -n "$padding" ]
 then
-filter="$filter,padding=$padding"
+filter="$filter,pad=$padding"
 fi
 
-
-if [ "$youtube" = "1" ]
+if [ -n "$filter_file" -a -r "$filter_file" ]
 then
-codec=$yt_codec
-else
-codec=$private_codec
+filter="$filter`cat $filter_file`"
 fi
 
+case "$codec" in
+(yt)
+  codec=$yt_codec
+;;
+(4|h264)
+  codec="libx264 -profile high"
+;;
+(5|h265)
+  codec="libx265"
+;;
+("")
+  if [ "$youtube" = "1" ]
+  then
+    codec=$yt_codec
+  else
+    codec=$private_codec
+  fi
+esac
 codec="$codec -preset $preset -crf $crf"
+if [ -n "$maxbitrate" ]
+then
+  codec="$codec -maxrate $maxbitrate -bufsize 32m"
+fi
 
-command="$command -r $fps -an -filter_complex $filter -c:v $codec $output"
+echo ffmpeg -noaccurate_seek -y -f concat -i "$input" -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
 
-echo $command
-
-$command
+nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" -r $fps -an -filter_complex "$filter" -c:v $codec "$output"

@@ -1,0 +1,163 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+
+# Prepares a specification for drawtext ffmpeg filter which prints some typical information on my road video.
+
+# Command line processing
+usage="myvid-prepare-text [options] < infile > outfile
+Options:
+  -h  -- prints usage message
+  -S size -- output video size (the same as in vid-process)
+"
+
+BASEX=0
+BASEY=664
+SIZE1=20
+SIZE2=28
+SIZE3=42
+FONT=/usr/share/fonts/truetype/DejaVuSans.ttf
+FONTT=/usr/share/fonts/truetype/DejaVuSansMono.ttf
+FONTC=/usr/share/fonts/truetype/DejaVuSansCondensed.ttf
+FONTB=/usr/share/fonts/truetype/DejaVuSans-Bold.ttf
+FONTI=/usr/share/fonts/truetype/DejaVuSans.ttf
+
+osize=t720
+
+while getopts "hs:e:z" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  S) osize="$OPTARG"
+     ;;
+  i) infile="$OPTARG"
+     ;;
+  o) outfile="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+
+function echo_text() {
+  echo -n ",drawtext=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):fontcolor=$color:fontfile=$font:fontsize=$size:text=$text"
+  if [ -n "$boxcolor" ]
+  then
+    echo -n ":box=1:boxborderw=5:boxcolor=$boxcolor"
+  fi
+}
+
+function draw_box() {
+  echo -n ",drawbox=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):w=$w:h=$h:t=$t:color=$color"
+}
+
+while read keyword from to arg text
+do
+  case "$keyword" in
+  (road)
+    case "$arg" in
+    (DK) color=#FF4444;;
+    (DW) color=#FFFF33;;
+    (S) color=#22FF77;;
+    (A) color=#3388FF;;
+    (*) color=#FFFFFF;;
+    esac
+    
+    x=8
+    y=4
+    w=100
+    h=48
+    t=3
+    draw_box
+
+    x=16
+    y=12
+    size=$SIZE3
+    font="$FONTB"
+    echo_text
+  ;;
+  (roadname)
+    x=120
+    y=16
+    color=white
+    size=$SIZE2
+    font="$FONTC"
+    echo_text
+  ;;
+  (city)
+    x=480
+    y=18
+    color=white
+    size=$SIZE2
+    font="$FONTB"
+    boxcolor=#048010
+    echo_text
+    boxcolor=
+  ;;
+  (note)
+  case "$arg" in
+    (?1)
+    x=520
+    y=8
+    ;;
+    (?2)
+    x=520
+    y=28
+    ;;
+    (?4)
+    x=760
+    y=32
+    ;;
+    (?3|*)
+    x=760
+    y=8
+    ;;
+  esac
+  case "$arg" in
+    # achtung!
+    (A?)
+    color=#FF3038
+    ;;
+    # miasto
+    (M?)
+    color=#44FF55
+    ;;
+    # granice i inna geografia
+    (G?)
+    color=#6677EE
+    ;;
+    # energetyka i przemysł
+    (E?)
+    color=#CC77F8
+    ;;
+    # zabytek itp.
+    (Z?)
+    color=#BBAA33
+    ;;
+    # inna droga
+    (D?)
+    color=#FFFF44
+    ;;
+    # linia kolejowa
+    (K?)
+    color=#FF9955
+    ;;
+    # inny obiekt
+    (O?)
+    color=#EEEEEE
+    ;;
+    (*)
+    color=white
+    ;;
+  esac
+    size=$SIZE1
+    font="$FONTC"
+    echo_text
+  ;;
+  esac
+done
