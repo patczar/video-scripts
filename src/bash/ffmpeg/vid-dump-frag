@@ -4,7 +4,7 @@
 # Distributed under MIT License. See LICENCE file in the root directory for details.
 
 # Command line processing
-usage="vid-drop-frag [options] infile [infile...]
+usage="vid-dump-frag [options] infile [infile...]
 Copies a continuos fragment of raw A/V stream (without decoding/encoding).
 The fragment may spread over a number of files in the input.
 Options:
@@ -12,9 +12,10 @@ Options:
   -o output_file -- sets output file
   -s secs -- start offset (in the first source video)
   -e secs -- end offset  (in the last source video)
+  -m -- 'mute', omit audio track(s)
 "
 
-while getopts "ho:s:e:" opt; do
+while getopts "ho:s:e:m" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -26,6 +27,8 @@ while getopts "ho:s:e:" opt; do
      ;;
   e) end="$OPTARG"
      ;;
+  m) mute=mute
+     ;;
   esac
 done
 
@@ -33,7 +36,7 @@ shift $(($OPTIND - 1))
 
 
 # Preparing the list of input files in a separate file - for "concat" demuxer
-SPEC_FILE="vid-drop-frag-spec.txt"
+SPEC_FILE="vid-dump-frag-spec.txt"
 
 > $SPEC_FILE
 
@@ -48,7 +51,7 @@ do
     start=
   fi
 done
-if [ -n "end" ]
+if [ -n "$end" ]
 then
   echo "outpoint $end" >> $SPEC_FILE
   end=
@@ -61,8 +64,17 @@ then
 output="out.mp4"
 fi
 
-command="ffmpeg -noaccurate_seek -y -f concat -i $SPEC_FILE -c copy $output"
+if [ -n "$mute" ]
+then
+copy="-c:v copy -an"
+else
+copy="-c copy"
+fi
+
+command="ffmpeg -noaccurate_seek -y -f concat -i $SPEC_FILE $copy $output"
 
 echo $command
 
 $command
+
+rm "$SPEC_FILE"

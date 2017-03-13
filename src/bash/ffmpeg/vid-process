@@ -20,13 +20,17 @@ where options are:
   -e eq_spec -- specifies the eq filter; if -g is also given, gamma spec is appended to this one
   -g gamma -- applies gamma correction (e.g. 1.2); default: no correction;
       gamma_strength variable has an impact on this
+  -u spec -- specifies the curves filter (see ffmpeg docs)
+  -U points -- specifies the list of points form the master channel of curves filter; must be given as a single argument (in quotes etc.)
   -n N -- apply denoise filter with the given strength
   -F file -- additional filters spec to be read from file
+  -I -- enables \"road junction\" etc. images to be referenced from filters in -F option
   -s input_size -- Ambarella formats: a1920 a2304 a2560
                    Ferguson formats: f1920 f1280
-  -S output_size -- s2 (960:480) m2 (1200:600)
+  -S output_size -- s2 (960:480) m2 (1280:640)
                     l2 (1440:720) x2 (1920:960)
                     m7 (1280:560) x7 (1920:840)
+                    m9 (1280:720) x9 (1920:1080)
                     y480 y720 y1080 (YouTube without text bar)
                     t480 t720 t1080 (YouTube with text bar)
 "
@@ -39,7 +43,7 @@ nice=6
 # Other settings
 private_codec=libx265
 #private_codec=libx264
-yt_codec="libx264 -profile high -bf 2 -g 15 -coder ac"
+yt_codec="libx264 -profile:v high -bf 2 -g 15 -coder ac"
 
 scalling_algorithm=lanczos
 #scalling_algorithm=bicubic
@@ -49,7 +53,12 @@ then
     gamma_strength=0.67
 fi
 
-while getopts "ho:i:d:x:f:e:g:F:s:S:q:Q:B:n:" opt; do
+images_dir="/home/patryk/projects/video-scripts/git/img"
+images="$images_dir/junc.png $images_dir/exit.png $images_dir/mop.png $images_dir/ppo.png"
+
+
+
+while getopts "ho:i:d:x:f:e:g:u:U:E:F:Is:S:q:Q:B:n:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -69,7 +78,23 @@ while getopts "ho:i:d:x:f:e:g:F:s:S:q:Q:B:n:" opt; do
      ;;
   e) eq="$OPTARG"
      ;;
+  u) curves="$OPTARG"
+     ;;
+  U) curves="m=$OPTARG"
+     ;;
+  E) filter_file="$OPTARG"
+    if [ -r "$filter_file" ]
+    then
+      filter_E="${filter_E},`cat $filter_file`"
+    fi
+     ;;
   F) filter_file="$OPTARG"
+    if [ -r "$filter_file" ]
+    then
+      filter_F="${filter_F},`cat $filter_file`"
+    fi
+     ;;
+  I) load_images=1
      ;;
   s) isize="$OPTARG"
      ;;
@@ -99,25 +124,40 @@ case "$isize@$osize" in
     crop="w=1920:h=960:x=0:y=64"
     scale=
   ;;
+  (f1920@l2)
+    cam=ferguson
+    crop="w=1824:h=912:x=48:y=112"
+    scale="w=1440:h=720"
+  ;;
   (f1920@m2)
     cam=ferguson
-    crop="w=1728:h=864:x=96:y=160"
-    scale="w=1200:h=600"
+    crop="w=1792:h=896:x=64:y=128"
+    scale="w=1280:h=640"
   ;;
   (f1280@m2)
     cam=ferguson
-    crop="w=1200:h=600:x=40:y=72"
+    crop="w=1280:h=640:x=0:y=36"
     scale=
   ;;
   (f1920@s2)
     cam=ferguson
-    crop="w=1664:h=832:x=128:y=192"
+    crop="w=1728:h=864:x=96:y=160"
     scale="w=960:h=480"
   ;;
   (f1280@s2)
     cam=ferguson
     crop="w=1200:h=600:x=40:y=72"
     scale="w=960:h=480"
+  ;;
+  (f1920@m9)
+    cam=ferguson
+    crop="w=1664:h=936:x=128:y=88"
+    scale="w=1280:h=720"
+  ;;
+  (f1280@m9)
+    cam=ferguson
+    crop=
+    scale=
   ;;
   (f1920@y720)
     cam=ferguson
@@ -196,6 +236,33 @@ case $Q in
   ;;
 esac
 
+case "$codec" in
+(yt)
+  codec=$yt_codec
+  format=yuv420p
+;;
+(4|h264)
+  codec="libx264"
+  format=yuv420p
+;;
+(5|h265)
+  codec="libx265"
+  format=yuv444p
+;;
+("")
+  if [ "$youtube" = "1" ]
+  then
+    codec=$yt_codec
+  else
+    codec=$private_codec
+  fi
+esac
+codec="$codec -preset $preset -crf $crf"
+if [ -n "$maxbitrate" ]
+then
+  codec="$codec -maxrate $maxbitrate -bufsize 20MB"
+fi
+
 export FFREPORT="file=${output%.*}.log:level=32"
 
 filter=null
@@ -220,6 +287,11 @@ then
 filter="$filter,crop=$crop"
 fi
 
+if [ -n "$format" ]
+then
+filter="$filter,format=$format"
+fi
+
 if [ -n "$scale" ]
 then
 filter="$filter,scale=$scale:flags=$sws_flags"
@@ -228,6 +300,11 @@ fi
 if [ -n "$dn" -a "$dn" != 0 ]
 then
 filter="$filter,hqdn3d=$dn"
+fi
+
+if [ -n "$curves" ]
+then
+filter="$filter,curves=$curves"
 fi
 
 if [ -n "$eq" -a -n "$gamma" ]
@@ -245,40 +322,27 @@ then
 filter="$filter,eq=$eq"
 fi
 
+filter="${filter}${filter_E}"
+
 if [ -n "$padding" ]
 then
 filter="$filter,pad=$padding"
 fi
 
-if [ -n "$filter_file" -a -r "$filter_file" ]
+
+filter="${filter}${filter_F}"
+
+
+images_input=
+if [ -n "$load_images" ]
 then
-filter="$filter`cat $filter_file`"
+  images_input=" -f image2 -framerate $fps"
+  for im in $images
+  do
+    images_input="$images_input -i $im"
+  done
 fi
 
-case "$codec" in
-(yt)
-  codec=$yt_codec
-;;
-(4|h264)
-  codec="libx264 -profile high"
-;;
-(5|h265)
-  codec="libx265"
-;;
-("")
-  if [ "$youtube" = "1" ]
-  then
-    codec=$yt_codec
-  else
-    codec=$private_codec
-  fi
-esac
-codec="$codec -preset $preset -crf $crf"
-if [ -n "$maxbitrate" ]
-then
-  codec="$codec -maxrate $maxbitrate -bufsize 32m"
-fi
+echo ffmpeg -noaccurate_seek -y -f concat -i "$input" $images_input -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
 
-echo ffmpeg -noaccurate_seek -y -f concat -i "$input" -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
-
-nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" $images_input -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
