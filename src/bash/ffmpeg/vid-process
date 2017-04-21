@@ -67,12 +67,12 @@ then
 fi
 
 images_dir="/home/patryk/projects/video-scripts/git/img"
-images="$images_dir/junc.png $images_dir/exit.png $images_dir/mop.png $images_dir/ppo.png"
+images="$images_dir/junc.png $images_dir/exit.png $images_dir/mop.png $images_dir/ppo.png $images_dir/logo_080.png"
 
 declare -A additional_filters
 
 
-while getopts "ho:i:d:x:f:e:g:u:U:Is:S:q:Q:n:A:B:C:D:E:F:" opt; do
+while getopts "ho:i:d:x:f:e:g:u:U:Is:S:q:Q:n:A:B:C:D:E:F:G:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -108,7 +108,7 @@ while getopts "ho:i:d:x:f:e:g:u:U:Is:S:q:Q:n:A:B:C:D:E:F:" opt; do
      ;;
   n) dn="$OPTARG"
      ;;
-  A|B|C|D|E|F) filter_file="$OPTARG"
+  A|B|C|D|E|F|G) filter_file="$OPTARG"
     if [ -r "$filter_file" ]
     then
       additional_filters[$opt]="${additional_filters[$opt]},`cat $filter_file`"
@@ -235,11 +235,11 @@ case $Q in
   ;;
   (3) preset=medium
     sws_flags=bicublin
-    internal_format=yuv444p12le
+    internal_format=yuv444p10le
   ;;
   (4) preset=slow
     sws_flags=lanczos
-    internal_format=yuv444p16le
+    internal_format=yuv444p12le
   ;;
   (5) preset=slower
     sws_flags=lanczos

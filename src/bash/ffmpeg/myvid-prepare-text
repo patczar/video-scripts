@@ -46,7 +46,7 @@ shift $(($OPTIND - 1))
 
 
 # The order of icon names here must corelate with the order of image sources in the vid-process command
-icons="junc exit mop ppo"
+icons="junc exit mop ppo logo"
 declare -A icon_img_cond
 for i in $icons
 do
