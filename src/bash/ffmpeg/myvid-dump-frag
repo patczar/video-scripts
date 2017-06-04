@@ -47,8 +47,8 @@ shift $(($OPTIND - 1))
 pwd=`pwd`
 date=${pwd##*/}
 
-fragments_dir=/home/patryk/ext/jazdy/wycinki
-dir="$fragments_dir/${date:0:7}"
+root_dir="/home/patryk/media/patczar.3t.2/mystore/jazdy/sytuacje"
+dir="$root_dir/${date:0:4}/wycinki/${date:0:7}"
 
 first_file="$1"
 hhmm=${first_file:4:4}
@@ -86,4 +86,5 @@ then
 fi
 
 mkdir -p "$dir"
+echo "Writing to $output"
 $command "$@"

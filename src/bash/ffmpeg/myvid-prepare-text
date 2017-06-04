@@ -15,7 +15,7 @@ Options:
 
 BASEX=0
 BASEY=664
-SIZE1=20
+SIZE1=22
 SIZE2=26
 SIZE3=28
 SIZE4=40
@@ -47,6 +47,17 @@ shift $(($OPTIND - 1))
 junction_img_cond=0
 junctions_txt=
 
+# The order of icon names here must corelate with the order of image sources in the vid-process command
+icons="junc exit mop ppo logo"
+declare -A icon_img_cond
+for i in $icons
+do
+  icon_img_cond[$i]=0
+done
+
+icons_txt=
+
+
 function echo_text() {
   echo -n ",drawtext=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):fontcolor=$color:fontfile=$font:fontsize=$size:text=$text"
   if [ -n "$boxcolor" ]
@@ -59,21 +70,26 @@ function draw_box() {
   echo -n ",drawbox=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):w=$w:h=$h:t=$t:color=$color"
 }
 
-function make_junctions() {
-  echo -n ",overlay=enable='$junction_img_cond':x=$(($BASEX + 120)):y=$(($BASEY))"
-  echo -n $junctions_txt
+function make_icons() {
+  for i in $icons
+  do
+    echo -n ",overlay=enable='${icon_img_cond[$i]}':x=$(($BASEX + 120)):y=$(($BASEY))"
+  done
+  echo -n $icons_txt
 }
 
-function remember_junction() {
+function remember_icon() {
   x=200
   y=18
   color=#CCEEFF
   size=$SIZE2
   font="$FONTC"
-  junctions_txt="$junctions_txt,drawtext=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):fontcolor=$color:fontfile=$font:fontsize=$size:text=$text"
-  junction_img_cond="$junction_img_cond+between(t,$from,$to)"
+  icons_txt="$icons_txt,drawtext=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):fontcolor=$color:fontfile=$font:fontsize=$size:text=$text"
+  icon_img_cond[$1]="${icon_img_cond[$1]}+between(t,$from,$to)"
 }
 
+
+echo -n "null"
 
 while read keyword from to arg text
 do
@@ -83,7 +99,7 @@ do
     (DK) color=#FF4444;;
     (DW) color=#FFFF33;;
     (S) color=#22FF77;;
-    (A) color=#3388FF;;
+    (A) color=#44AAFF;;
     (*) color=#FFFFFF;;
     esac
     
@@ -118,32 +134,48 @@ do
     echo_text
     boxcolor=
   ;;
-  (junc)
-    remember_junction
+  (icon)
+    remember_icon $arg
   ;;
   (note)
   case "$arg" in
     (?1)
-    x=520
-    y=8
+    x=500
+    y=4
     ;;
     (?2)
-    x=520
-    y=28
+    x=500
+    y=30
+    ;;
+    (?3)
+    x=680
+    y=4
     ;;
     (?4)
-    x=760
-    y=32
+    x=680
+    y=30
     ;;
-    (?3|*)
+    (?5)
     x=760
-    y=8
+    y=4
+    ;;
+    (?6)
+    x=760
+    y=30
+    ;;
+    (?7)
+    x=920
+    y=4
+    ;;
+    (?8)
+    x=920
+    y=30
     ;;
   esac
   case "$arg" in
     # achtung!
     (A?)
-    color=#FF3038
+    color=#FF4455
     ;;
     # miasto
     (M?)
@@ -151,7 +183,7 @@ do
     ;;
     # granice i inna geografia
     (G?)
-    color=#6677EE
+    color=#6688FF
     ;;
     # energetyka i przemysł
     (E?)
@@ -163,11 +195,11 @@ do
     ;;
     # inna droga
     (D?)
-    color=#FFFF44
+    color=#EEFF44
     ;;
     # linia kolejowa
     (K?)
-    color=#FF9955
+    color=#FFAA44
     ;;
     # inny obiekt
     (O?)
@@ -184,7 +216,7 @@ do
   esac
 done
 
-if [ -n "$junctions_txt" ]
+if [ -n "$icons_txt" ]
 then
-  make_junctions
+  make_icons
 fi

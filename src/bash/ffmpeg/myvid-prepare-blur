@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+
+# Prepares a specification of a complex "blurring" filter, which blurs the margin region of a video.
+
+# Help
+usage="myvid-prepare-blur [options] > outfile
+Options:
+  -h  -- prints usage message
+  -l -- left margin
+  -r -- right margin
+  -t -- top margin
+  -m -- left, right and top margins, if all equal
+  -u -- blurring radius (optional, a reasonable value used as default)
+  -s -- blurring strength (optional, a reasonable value used as default)
+  -f -- spec file which should contain a list of time intervals when the filter is active;
+        by default the filter is applied to the whole video
+"
+
+# Default values
+lmargin=0
+rmargin=0
+tmargin=0
+radius=4
+strength=2
+
+# Command line processing
+while getopts "hm:l:r:t:u:s:f:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  m) margin="$OPTARG"
+     lmargin="$margin"
+     rmargin="$margin"
+     tmargin="$margin"
+     ;;
+  l) lmargin="$OPTARG"
+     ;;
+  r) rmargin="$OPTARG"
+     ;;
+  t) tmargin="$OPTARG"
+     ;;
+  u) radius="$OPTARG"
+     ;;
+  s) strength="$OPTARG"
+     ;;
+  f) specfile="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ -r "$specfile" ]
+then
+  enable="0"
+  while read from to
+  do
+    enable="$enable+between(t,$from,$to)"
+  done < "$specfile"
+else
+  enable="1"
+fi
+
+echo -n "split[a][b];"
+echo -n "[a]boxblur=enable='$enable':luma_radius=$radius:luma_power=$strength[back];"
+echo -n "[b]crop=w=in_w-$lmargin-$rmargin:h=in_h-$tmargin:x=$lmargin:y=$tmargin[fore];"
+echo -n "[back][fore]overlay=x=$lmargin:y=$tmargin"

@@ -3,6 +3,8 @@
 # (c) Patryk Czarnik
 # Distributed under MIT License. See LICENCE file in the root directory for details.
 
+# The main video processing script. I use it as a basic tools for postprocessing of my dash cam videos.
+
 usage="vid-process [options]
 where options are:
   -h  -- prints usage message
@@ -10,8 +12,7 @@ where options are:
   -i file -- input specification file, in the format of ffmpeg concat demuxer
   -d codec -- which codec to use. 4 means h264, 5 means h265
   -q quality -- passed as CRF option to ffmpeg (\"constant quality\", variable bitrate depending on image details, reasonable values for me are between 20 (high) and 30 (low))
-  -Q N -- encoding quality / encoding time tradeoff; supported values are from 1 to 5, the higher the slower = better quality. Default 4.
-  -B bitrate -- maximum local bitrate
+  -Q N -- encoding quality / encoding time tradeoff; supported values are from 1 to 5, the higher the slower = better quality. Default 3.
   -x N -- drop frames to increase speed;
       every Nth frame is kept, the rest is lost.
       If the framerate is not changed, it means N time increase of the video speed.
@@ -23,8 +24,28 @@ where options are:
   -u spec -- specifies the curves filter (see ffmpeg docs)
   -U points -- specifies the list of points form the master channel of curves filter; must be given as a single argument (in quotes etc.)
   -n N -- apply denoise filter with the given strength
+<<<<<<< HEAD
   -F file -- additional filters spec to be read from file
   -J -- enables \"road junction\" image to be referenced in -F option
+=======
+  -A -B -C -D -E -F -G file -- additional filters spec to be read from file.
+      The file should contain a fragment of command-line filter specification, without a newline.
+      The letter specifies the place in filters chain where the given filter should be put:
+      * A - at the beginning of the chain, to the original video
+      then unneeded frames are dropped and the output speed is set
+      * B - after frame dropping, before format conversion
+      then comes conversion to internal format and cropping of the image area
+      * C - between cropping and scaling (applied to unscaled video)
+      then the video is scaled to appropriate result size (without pads, if any)
+      * D - after scaling the video, before any color enhancements
+      then comes denoise and color enhancement filters
+      * E - after color processing, before adding pads; the best place to add blurring
+      then pads are added (if any)
+      * F - before converting to output format; the best place to add text
+      then comes conversion to the output format
+      * G - applied at the end of the chain, on the video in the output format
+  -I -- enables \"road junction\" etc. images to be referenced from filters in -F option
+>>>>>>> da9a4e1664613c42d7b5d51b330eb69b8185e919
   -s input_size -- Ambarella formats: a1920 a2304 a2560
                    Ferguson formats: f1920 f1280
   -S output_size -- s2 (960:480) m2 (1280:640)
@@ -43,17 +64,24 @@ nice=6
 # Other settings
 private_codec=libx265
 #private_codec=libx264
-yt_codec="libx264 -profile high -bf 2 -g 15 -coder ac"
-
-scalling_algorithm=lanczos
-#scalling_algorithm=bicubic
+yt_codec="libx264 -profile:v high -bf 2 -g 15 -coder ac"
 
 if [ -z "$gamma_strength" ]
 then
     gamma_strength=0.67
 fi
 
+<<<<<<< HEAD
 while getopts "ho:i:d:x:f:e:g:u:U:F:Js:S:q:Q:B:n:" opt; do
+=======
+images_dir="/home/patryk/projects/video-scripts/git/img"
+images="$images_dir/junc.png $images_dir/exit.png $images_dir/mop.png $images_dir/ppo.png $images_dir/logo_080.png"
+
+declare -A additional_filters
+
+
+while getopts "ho:i:d:x:f:e:g:u:U:Is:S:q:Q:n:A:B:C:D:E:F:G:" opt; do
+>>>>>>> da9a4e1664613c42d7b5d51b330eb69b8185e919
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -77,7 +105,11 @@ while getopts "ho:i:d:x:f:e:g:u:U:F:Js:S:q:Q:B:n:" opt; do
      ;;
   U) curves="m=$OPTARG"
      ;;
+<<<<<<< HEAD
   F) filter_file="$OPTARG"
+=======
+  I) load_images=1
+>>>>>>> da9a4e1664613c42d7b5d51b330eb69b8185e919
      ;;
   J) junction=1
      ;;
@@ -89,9 +121,13 @@ while getopts "ho:i:d:x:f:e:g:u:U:F:Js:S:q:Q:B:n:" opt; do
      ;;
   Q) Q="$OPTARG"
      ;;
-  B) maxbitrate="$OPTARG"
-     ;;
   n) dn="$OPTARG"
+     ;;
+  A|B|C|D|E|F|G) filter_file="$OPTARG"
+    if [ -r "$filter_file" ]
+    then
+      additional_filters[$opt]="${additional_filters[$opt]},`cat $filter_file`"
+    fi
      ;;
   esac
 done
@@ -206,24 +242,57 @@ fi
 case $Q in
   (1) preset=veryfast
     sws_flags=fast_bilinear
+    internal_format=yuv420p
   ;;
   (2) preset=fast
     sws_flags=bilinear
+    internal_format=yuv444p
   ;;
   (3) preset=medium
     sws_flags=bicublin
+    internal_format=yuv444p10le
   ;;
   (4) preset=slow
-    sws_flags=$scalling_algorithm
+    sws_flags=lanczos
+    internal_format=yuv444p12le
   ;;
   (5) preset=slower
-    sws_flags=$scalling_algorithm
+    sws_flags=lanczos
+    internal_format=yuv444p16le
   ;;
 esac
+
+case "$codec" in
+(yt)
+  codec=$yt_codec
+  format=yuv420p
+;;
+(4|h264)
+  codec="libx264"
+  format=yuv420p
+;;
+(5|h265)
+  codec="libx265"
+  format=yuv444p
+;;
+("")
+  if [ "$youtube" = "1" ]
+  then
+    codec=$yt_codec
+  else
+    codec=$private_codec
+  fi
+esac
+codec="$codec -preset $preset -crf $crf"
+if [ -n "$maxbitrate" ]
+then
+  codec="$codec -maxrate $maxbitrate -bufsize 20MB"
+fi
 
 export FFREPORT="file=${output%.*}.log:level=32"
 
 filter=null
+filter="${filter}${additional_filters[A]}"
 
 if [ -n "$tb" ]
 then
@@ -240,15 +309,23 @@ then
 filter="$filter,framestep=$speed"
 fi
 
+filter="${filter}${additional_filters[B]}"
+
+filter="${filter},format=$internal_format"
+
 if [ -n "$crop" ]
 then
 filter="$filter,crop=$crop"
 fi
 
+filter="${filter}${additional_filters[C]}"
+
 if [ -n "$scale" ]
 then
 filter="$filter,scale=$scale:flags=$sws_flags"
 fi
+
+filter="${filter}${additional_filters[D]}"
 
 if [ -n "$dn" -a "$dn" != 0 ]
 then
@@ -275,16 +352,22 @@ then
 filter="$filter,eq=$eq"
 fi
 
+filter="${filter}${additional_filters[E]}"
+
 if [ -n "$padding" ]
 then
 filter="$filter,pad=$padding"
 fi
 
-if [ -n "$filter_file" -a -r "$filter_file" ]
+
+filter="${filter}${additional_filters[F]}"
+
+if [ -n "$format" ]
 then
-filter="$filter`cat $filter_file`"
+filter="$filter,format=$format"
 fi
 
+<<<<<<< HEAD
 case "$codec" in
 (yt)
   codec=$yt_codec
@@ -318,3 +401,20 @@ fi
 echo ffmpeg -noaccurate_seek -y -f concat -i "$input" $maybe_junction -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
 
 nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" $maybe_junction -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+=======
+filter="${filter}${additional_filters[G]}"
+
+images_input=
+if [ -n "$load_images" ]
+then
+  images_input=" -f image2 -framerate $fps"
+  for im in $images
+  do
+    images_input="$images_input -i $im"
+  done
+fi
+
+echo ffmpeg -noaccurate_seek -y -f concat -i "$input" $images_input -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+
+nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" $images_input -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+>>>>>>> da9a4e1664613c42d7b5d51b330eb69b8185e919
