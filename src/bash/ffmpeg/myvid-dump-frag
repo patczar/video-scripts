@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# A wrapper around simpler vid-dump-frag script
+# using a default location in my private video database.
+
+# Command line processing
+usage="vid-dump-frag [options] infile [infile...]
+Copies a continuos fragment of raw A/V stream (without decoding/encoding)
+and saves in the default location.
+The fragment may spread over a number of files in the input.
+Options:
+  -h  -- prints usage message
+  -s secs -- start offset (in the first source video)
+  -e secs -- end offset  (in the last source video)
+  -m -- 'mute', omit audio track(s)
+  -z -- encodes (only the video channel) again to save disc space
+  
+Important assumption: this command is run from a directory which name is the date
+the video was recorded. The output file name is based on this.
+"
+
+cmd=vid-dump-frag
+
+while getopts "hs:e:mz" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  s) start="$OPTARG"
+     ;;
+  e) end="$OPTARG"
+     ;;
+  m) mute=mute
+     ;;
+  z) cmd=vid-arch-frag
+     suffix=a
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+pwd=`pwd`
+date=${pwd##*/}
+
+fragments_dir=/home/patryk/ext/jazdy/wycinki
+dir="$fragments_dir/${date:0:7}"
+
+first_file="$1"
+hhmm=${first_file:4:4}
+if [ -n "$start" ]
+then
+  ss=`printf %04d $start`
+else
+  ss=0000
+fi
+
+if [ -n "$end" ]
+then
+  ee=`printf %04d $end`
+else
+  ee=a000
+fi
+
+output="$dir/$date-${hhmm}_${ss}_${ee}${suffix}.mp4"
+
+command="$cmd -o $output"
+
+if [ -n "$mute" ]
+then
+  command="$command -m"
+fi
+
+if [ -n "$start" ]
+then
+  command="$command -s $start"
+fi
+
+if [ -n "$end" ]
+then
+  command="$command -e $end"
+fi
+
+mkdir -p "$dir"
+$command "$@"

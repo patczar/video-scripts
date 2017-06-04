@@ -16,8 +16,9 @@ Options:
 BASEX=0
 BASEY=664
 SIZE1=20
-SIZE2=28
-SIZE3=42
+SIZE2=26
+SIZE3=28
+SIZE4=40
 FONT=/usr/share/fonts/truetype/DejaVuSans.ttf
 FONTT=/usr/share/fonts/truetype/DejaVuSansMono.ttf
 FONTC=/usr/share/fonts/truetype/DejaVuSansCondensed.ttf
@@ -43,6 +44,8 @@ done
 
 shift $(($OPTIND - 1))
 
+junction_img_cond=0
+junctions_txt=
 
 function echo_text() {
   echo -n ",drawtext=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):fontcolor=$color:fontfile=$font:fontsize=$size:text=$text"
@@ -55,6 +58,22 @@ function echo_text() {
 function draw_box() {
   echo -n ",drawbox=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):w=$w:h=$h:t=$t:color=$color"
 }
+
+function make_junctions() {
+  echo -n ",overlay=enable='$junction_img_cond':x=$(($BASEX + 120)):y=$(($BASEY))"
+  echo -n $junctions_txt
+}
+
+function remember_junction() {
+  x=200
+  y=18
+  color=#CCEEFF
+  size=$SIZE2
+  font="$FONTC"
+  junctions_txt="$junctions_txt,drawtext=enable='between(t,$from,$to)':x=$(($BASEX + x)):y=$(($BASEY + y)):fontcolor=$color:fontfile=$font:fontsize=$size:text=$text"
+  junction_img_cond="$junction_img_cond+between(t,$from,$to)"
+}
+
 
 while read keyword from to arg text
 do
@@ -77,13 +96,13 @@ do
 
     x=16
     y=12
-    size=$SIZE3
+    size=$SIZE4
     font="$FONTB"
     echo_text
   ;;
   (roadname)
     x=120
-    y=16
+    y=18
     color=white
     size=$SIZE2
     font="$FONTC"
@@ -93,11 +112,14 @@ do
     x=480
     y=18
     color=white
-    size=$SIZE2
+    size=$SIZE3
     font="$FONTB"
     boxcolor=#048010
     echo_text
     boxcolor=
+  ;;
+  (junc)
+    remember_junction
   ;;
   (note)
   case "$arg" in
@@ -161,3 +183,8 @@ do
   ;;
   esac
 done
+
+if [ -n "$junctions_txt" ]
+then
+  make_junctions
+fi

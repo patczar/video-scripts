@@ -20,13 +20,17 @@ where options are:
   -e eq_spec -- specifies the eq filter; if -g is also given, gamma spec is appended to this one
   -g gamma -- applies gamma correction (e.g. 1.2); default: no correction;
       gamma_strength variable has an impact on this
+  -u spec -- specifies the curves filter (see ffmpeg docs)
+  -U points -- specifies the list of points form the master channel of curves filter; must be given as a single argument (in quotes etc.)
   -n N -- apply denoise filter with the given strength
   -F file -- additional filters spec to be read from file
+  -J -- enables \"road junction\" image to be referenced in -F option
   -s input_size -- Ambarella formats: a1920 a2304 a2560
                    Ferguson formats: f1920 f1280
-  -S output_size -- s2 (960:480) m2 (1200:600)
+  -S output_size -- s2 (960:480) m2 (1280:640)
                     l2 (1440:720) x2 (1920:960)
                     m7 (1280:560) x7 (1920:840)
+                    m9 (1280:720) x9 (1920:1080)
                     y480 y720 y1080 (YouTube without text bar)
                     t480 t720 t1080 (YouTube with text bar)
 "
@@ -49,7 +53,7 @@ then
     gamma_strength=0.67
 fi
 
-while getopts "ho:i:d:x:f:e:g:F:s:S:q:Q:B:n:" opt; do
+while getopts "ho:i:d:x:f:e:g:u:U:F:Js:S:q:Q:B:n:" opt; do
   case "$opt" in
   h|\?)
      echo "$usage"
@@ -69,7 +73,13 @@ while getopts "ho:i:d:x:f:e:g:F:s:S:q:Q:B:n:" opt; do
      ;;
   e) eq="$OPTARG"
      ;;
+  u) curves="$OPTARG"
+     ;;
+  U) curves="m=$OPTARG"
+     ;;
   F) filter_file="$OPTARG"
+     ;;
+  J) junction=1
      ;;
   s) isize="$OPTARG"
      ;;
@@ -99,25 +109,40 @@ case "$isize@$osize" in
     crop="w=1920:h=960:x=0:y=64"
     scale=
   ;;
+  (f1920@l2)
+    cam=ferguson
+    crop="w=1824:h=912:x=48:y=112"
+    scale="w=1440:h=720"
+  ;;
   (f1920@m2)
     cam=ferguson
-    crop="w=1728:h=864:x=96:y=160"
-    scale="w=1200:h=600"
+    crop="w=1792:h=896:x=64:y=128"
+    scale="w=1280:h=640"
   ;;
   (f1280@m2)
     cam=ferguson
-    crop="w=1200:h=600:x=40:y=72"
+    crop="w=1280:h=640:x=0:y=36"
     scale=
   ;;
   (f1920@s2)
     cam=ferguson
-    crop="w=1664:h=832:x=128:y=192"
+    crop="w=1728:h=864:x=96:y=160"
     scale="w=960:h=480"
   ;;
   (f1280@s2)
     cam=ferguson
     crop="w=1200:h=600:x=40:y=72"
     scale="w=960:h=480"
+  ;;
+  (f1920@m9)
+    cam=ferguson
+    crop="w=1664:h=936:x=128:y=88"
+    scale="w=1280:h=720"
+  ;;
+  (f1280@m9)
+    cam=ferguson
+    crop=
+    scale=
   ;;
   (f1920@y720)
     cam=ferguson
@@ -230,6 +255,11 @@ then
 filter="$filter,hqdn3d=$dn"
 fi
 
+if [ -n "$curves" ]
+then
+filter="$filter,curves=$curves"
+fi
+
 if [ -n "$eq" -a -n "$gamma" ]
 then
 eq="${eq}:"
@@ -260,7 +290,7 @@ case "$codec" in
   codec=$yt_codec
 ;;
 (4|h264)
-  codec="libx264 -profile high"
+  codec="libx264 -profile:v high"
 ;;
 (5|h265)
   codec="libx265"
@@ -276,9 +306,15 @@ esac
 codec="$codec -preset $preset -crf $crf"
 if [ -n "$maxbitrate" ]
 then
-  codec="$codec -maxrate $maxbitrate -bufsize 32m"
+  codec="$codec -maxrate $maxbitrate -bufsize 20MB"
 fi
 
-echo ffmpeg -noaccurate_seek -y -f concat -i "$input" -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+maybe_junction=
+if [ -n "$junction" ]
+then
+  maybe_junction=" -f image2 -framerate $fps -i kreuz_cyan_352x56.png"
+fi
 
-nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+echo ffmpeg -noaccurate_seek -y -f concat -i "$input" $maybe_junction -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
+
+nice -n $nice ffmpeg -noaccurate_seek -y -f concat -i "$input" $maybe_junction -r $fps -an -filter_complex "$filter" -c:v $codec "$output"
