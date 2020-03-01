@@ -7,6 +7,10 @@
 
 ### global constants and default settings ###
 
+# All submodules
+__all__ = [
+    'frames',
+]
 
 
 
