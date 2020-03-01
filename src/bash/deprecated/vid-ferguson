@@ -1,0 +1,185 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# This script calls vid-process, but first it sets the default image sizes
+# (cropping and scaling) for the Ferguson camera HD recordings.
+
+usage="vid-fergusson [options] infile [infile...]
+where options are:
+  -h  -- prints this usage message
+  -o output_file -- sets output file
+  -c width:height:left_offset:bottom_offset -- specification of the cropping rectangle, applied to the original input
+  -r width:height -- final video size, to which the cropped image is resized
+  -e width:height[:x:y] -- expands the size (after cropping and scaling); refer to mplayer docs for details
+  -p spec -- picture size policy; it gives several predefined settings for -c and -r and can be used instead:
+     fhd-m2 -- -c 1728:864:96:160 -r 1200:600
+     hd-m2 -- -c 1200:600:40:72 # no resize
+     fhd-s2 -- -c 1664:832:128:192 -r 960:480
+     hd-s2 -- -crop -r 960:480
+     fhd-p720 -- -c 1664:936:128:88 -r 1280:720
+     hd-p720 -- # original size kept
+     fhd-p480 -- -c 1600:900:160:120 -r 856:480
+     hd-p480 -- -c 1152:648:64:32 -r 856:480
+     fhd-e720 -- -c 1920:996:0:24 -r 1280:664 -e 0:-56:0:0 # result size is 1280x720
+     hd-e720 -- -c 1280:664:0:16 -e 0:-56:0:0 # result size is 1280x720
+  -s expr -- speed (increased this many times); you can use expressions like 2002/1000
+  -f number -- frames per second in the result
+  There is a different way to set speed-related arguments suited for Ferguson camera videos:
+  -x N -- simplifying things: the video speed is increased N times;
+              to be precise: result speed is N*1001/1000
+  -3 -- changes the meaning of -x parameter: divides the number by 3,
+        so that the result speed is N*1001/3000
+  -F M -- the intensity of frame dropping, every M-th frame is kept,
+     the rest is dropped; defaults to the value of -x argument,
+     and then the resulting fps is equal to 30 (assuming 29.9 in the source);
+     when lower than -x, it will result in a higher fps (e.g. -x 4 -F 2 will give fps 60),
+     when higher than -x, it will give a lower fps (e.g. -x 2 -F 4 leads to fps 15)
+  -q quality -- integer value from 0 to 5; predefined settings of \"quality\",
+     the higher, the better, but the conversion will take more time, and the resulting file may be bigger
+  -B -- use the 'specified bitrate' policy when setting the quality
+  -R -- use the 'crf' (constant rate factor, which in fact means constant perceived quality) policy; this is default.
+  -b number -- assumed output bitrate to be passed to encoder
+  -a number -- crf value; for x264 encoder use values between 1 (hihgest quality) and 50 (lowest quality); if unsusre, start with 20
+  -g gamma -- applies gamma correction (e.g. 1.2); default: no correction
+  Options allowing to cut a fragment of the video:
+  -t time -- start time (in sec, floats allowed)
+  -T time -- end time (in sec, floats allowed)
+"
+
+# Reading all available options. Their values are passed to the main script via variables.
+
+mult=1
+
+while getopts "ho:c:r:e:p:s:f:x:3F:q:BRb:a:g:t:T:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  c) crop="$OPTARG"
+     ;;
+  r) resize="$OPTARG"
+     ;;
+  e) expand="$OPTARG"
+     ;;
+  p) policy="$OPTARG"
+     ;;
+  s) speed="$OPTARG"
+     ;;
+  f) fps="$OPTARG"
+     ;;
+  x) xspeed="$OPTARG"
+     ;;
+  3) mult=3
+     ;;
+  F) fdrop="$OPTARG"
+     ;;
+  q) quality="$OPTARG"
+     ;;
+  B) quality_driver="B"
+     ;;
+  R) quality_driver="R"
+     ;;
+  b) bitrate="$OPTARG"
+     ;;
+  a) crf="$OPTARG"
+     ;;
+  g) gamma="$OPTARG"
+     ;;
+  t) start_time="$OPTARG"
+     ;;
+  T) end_time="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+# Handling -p option
+case "$policy" in
+# 2x1
+  fhd-m2)
+    crop="1728:864:96:160"
+    resize="1200:600"
+    ;;
+  hd-m2)
+    crop="1200:600:40:72"
+    resize="1200:600"
+    ;;
+  fhd-s2)
+    crop="1664:832:128:192"
+    resize="960:480"
+    ;;
+  hd-s2)
+    crop="1200:600:40:72"
+    resize="960:480"
+    ;;
+# 16:9
+  fhd-p720)
+    crop="1664:936:128:88"
+    resize="1280:720"
+  ;;
+  hd-p720)
+    crop=""
+    resize="1280:720"
+  ;;
+  fhd-p480)
+    crop="1600:900:160:120"
+    #or crop="1536:864:192:160"
+    resize="856:480"
+  ;;
+  hd-p480)
+    crop="1152:648:64:32"
+    resize="856:480"
+  ;;
+  fhd-e720)
+    crop="1760:913:80:104"
+    resize="1280:664"
+    expand="0:-56:0:0"
+  ;;
+  hd-e720)
+    crop="1280:664:0:16"
+    resize=""
+    expand="0:-56:0:0"
+  ;;
+esac
+
+# Usable formats (to crop original image).
+# 2:1 :
+# 
+# 1728:864:96:160
+# 1664:832:128:192
+# 1600:900:160:120
+# 1536:864:192:160
+# 1280:640:0:32
+# 1200:600:40:72
+# 1120:560:80:112
+# 1040:520:120:152
+# 960:480:160:192
+
+
+# Handling -x and -F options
+if [ -n "$xspeed" -o -n "$fdrop" ]
+then
+  if [ -z "$xspeed" ]
+  then xspeed=1
+  fi
+  speed="$(($xspeed * 1001))/$(($mult * 1000))"
+  if [ -n "$fdrop" ]
+  then fps="$((30 * $xspeed / $fdrop / $mult))"
+  elif [ -z "$fps" ]
+  then fps="30"
+  fi
+fi
+
+# echo "speed = $speed"
+# echo "fps = $fps"
+
+
+# Calling the main script
+export output crop resize expand speed fps bitrate gamma resize_settings quality quality_driver crf start_time end_time
+vid-process "$@"

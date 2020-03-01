@@ -17,10 +17,10 @@ BASEX=0
 BASEY=664
 SIZE1=22
 SIZE2=26
-SIZE3=28
+SIZE3=32
 SIZE4=40
 FONT=/usr/share/fonts/truetype/DejaVuSans.ttf
-FONTT=/usr/share/fonts/truetype/DejaVuSansMono.ttf
+FONTT=/usr/share/fonts/truetype/Hack.ttf
 FONTC=/usr/share/fonts/truetype/DejaVuSansCondensed.ttf
 FONTB=/usr/share/fonts/truetype/DejaVuSans-Bold.ttf
 FONTI=/usr/share/fonts/truetype/DejaVuSans.ttf
@@ -73,13 +73,17 @@ function draw_box() {
 function make_icons() {
   for i in $icons
   do
+    echo -n ",drawbox=enable='${icon_img_cond[$i]}':x=$(($BASEX + 120)):y=$(($BASEY)):h=56:w=560:t=40:c=#000000"
+  done
+  for i in $icons
+  do
     echo -n ",overlay=enable='${icon_img_cond[$i]}':x=$(($BASEX + 120)):y=$(($BASEY))"
   done
   echo -n $icons_txt
 }
 
 function remember_icon() {
-  x=200
+  x=224
   y=18
   color=#CCEEFF
   size=$SIZE2
@@ -126,7 +130,7 @@ do
   ;;
   (city)
     x=480
-    y=18
+    y=12
     color=white
     size=$SIZE3
     font="$FONTB"
@@ -183,7 +187,7 @@ do
     ;;
     # granice i inna geografia
     (G?)
-    color=#6688FF
+    color=#88AAFF
     ;;
     # energetyka i przemysł
     (E?)

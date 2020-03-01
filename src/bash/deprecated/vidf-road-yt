@@ -1,0 +1,257 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# Unlike the others, this script is very specialised. It is orinted on producing a YouTube-compilant video (fragments)
+# from a road camera recording. The set of options is reduced compared to vid-process and vid-ferguson,
+# but on the other hand I added options to create some standard (to my videos) overlay texts.
+
+usage="vid-road-yt [options] infile [infile...]
+where options are:
+  -h  -- prints this usage message
+  -o output_file -- path to the output file
+  -i (hd|fhd) -- input format (required; hd = 1280x720, fhd = 1920x1080)
+The output video will be always 1280x720.
+Speed options exactly like in vid-ferguson script:  
+  -x N -- simplifying things: the video speed is increased N times;
+          to be precise: result speed is N*1001/1000
+  -3 -- changes the meaning of -x parameter: divides the number by 3,
+        so that the result speed is N*1001/3000
+  -F M -- the intensity of frame dropping, every M-th frame is kept,
+     the rest is dropped; defaults to the value of -x argument,
+     and then the resulting fps is equal to 30 (assuming 29.9 in the source);
+     when lower than -x, it will result in a higher fps (e.g. -x 4 -F 2 will give fps 60),
+     when higher than -x, it will give a lower fps (e.g. -x 2 -F 4 leads to fps 15)
+  -a number -- crf value; for x264 encoder use values between 1 (hihgest quality) and 50 (lowest quality); if unsure, start with 20, which is the default
+  -g gamma -- applies gamma correction (e.g. 1.2); default: no correction
+Options allowing to cut a fragment of the video:
+  -t time -- start time (in sec, floats allowed)
+  -T time -- end time (in sec, floats allowed)
+Options for overlay and subscript texts:
+  -R color -- the color of the road number, depending on the road category. Defaults to white.
+     In Poland we mark state (national) roads in red, voyevodship (district) roads in yellow, motorways in blue...
+  -r -- road number
+  -p -- place (city, town, etc.)
+  -m -- normal message
+  -M -- emphased message
+  -n -- normal message (second line)
+  -N -- emphased message (second line)
+"
+
+mult=1
+crf=20
+
+while getopts "ho:i:x:3F::a:g:t:T:R:r:p:m:M:n:N:" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  i) input_format="$OPTARG"
+     ;;
+  x) xspeed="$OPTARG"
+     ;;
+  3) mult=3
+     ;;
+  F) fdrop="$OPTARG"
+     ;;
+  a) crf="$OPTARG"
+     ;;
+  g) gamma="$OPTARG"
+     ;;
+  t) start_time="$OPTARG"
+     ;;
+  T) end_time="$OPTARG"
+     ;;
+  R) road_color="$OPTARG"
+     ;;
+  r) r="$OPTARG"
+     ;;
+  p) p="$OPTARG"
+     ;;
+  m) m="$OPTARG"
+     ;;
+  M) M="$OPTARG"
+     ;;
+  n) n="$OPTARG"
+     ;;
+  N) N="$OPTARG"
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+print_file=./print.rgba
+print_fifo=./print_fifo
+print_x=yes # no
+gamma_strength=0.67
+sws=9
+resize_settings=":0:0:7"
+denoise="hqdn3d=2:3:3:4"
+encopts="profile=high:cabac:bframes=2:nob_adapt:subq=8:frameref=5:me=umh:crf=$crf"
+fileopts="-of lavf" # necessary for mp4 format
+
+case "$input_format" in
+  fhd)
+    crop="1760:913:80:104"
+    resize="1280:664"
+    expand="0:-56:0:0"
+  ;;
+  hd)
+    crop="1280:664:0:16"
+    resize=""
+    expand="0:-56:0:0"
+  ;;
+  *)
+    echo "Invalid input format (-i). Exiting..."
+    exit 1
+esac
+
+if [ -z "$xspeed" ]
+then xspeed=1
+fi
+speed="$(($xspeed * 1001))/$(($mult * 1000))"
+if [ -n "$fdrop" ]
+then fps="$((30 * $xspeed / $fdrop / $mult))"
+elif [ -z "$fps" ]
+then fps="30"
+fi
+
+
+# Speed related options
+speedopts=""
+if [ -n "$speed" ]
+then
+speedopts="${speedopts} -speed $speed"
+fi
+if [ -n "$fps" ]
+then
+speedopts="${speedopts} -ofps $fps"
+fi
+
+# Fragment cutting options
+timeopts=""
+if [ -n "$start_time" ]
+then
+  timeopts="$timeopts -ss $start_time"
+fi
+if [ -n "$end_time" ]
+then
+  if [ -n "$start_time" ]
+  then
+    sta="$start_time"
+  else
+    sta=0
+  fi
+  if [ -n "$speed" ]
+  then
+    spe="$speed"
+  else
+    spe=1
+  fi
+
+  endpos=`echo "( $end_time - $sta ) / ( $spe )" | bc`
+
+  timeopts="$timeopts -endpos $endpos"
+fi
+
+vf="softskip"
+if [ -n "$crop" ]
+then
+vf="$vf,crop=$crop"
+fi
+if [ -n "$resize" ]
+then
+vf="$vf,scale=$resize$resize_settings"
+fi
+if [ -n "$expand" ]
+then
+vf="$vf,expand=$expand"
+fi
+if [ -n "$denoise" ]
+then
+vf="$vf,$denoise"
+fi
+if [ -n "$gamma" ]
+then
+vf="$vf,eq2=$gamma:1.0:0:1.0:$gamma:$gamma:$gamma:$gamma_strength"
+fi
+
+echo "Settings:"
+echo " crop = $crop"
+echo " resize = $resize"
+echo " expand = $expand"
+echo " gamma = $gamma"
+echo " fps = $fps"
+echo " crf = $crf"
+
+declare -a print_cmd
+print_cmd+=(vid-print-road-yt -o "$print_file")
+if [ "$print_x" = yes ]
+then
+  txt="x${xspeed}"
+  if [ "$mult" != 1 ]
+  then
+  txt+="/${mult}"
+  fi
+print_cmd+=(-x "$txt")
+fi
+
+if [ -n "$R" ]
+then print_cmd+=(-R "$R")
+fi
+
+if [ -n "$r" ]
+then print_cmd+=(-r "$r")
+fi
+
+if [ -n "$p" ]
+then print_cmd+=(-p "$p")
+fi
+
+if [ -n "$m" ]
+then print_cmd+=(-m "$m")
+fi
+
+if [ -n "$M" ]
+then print_cmd+=(-M "$M")
+fi
+
+if [ -n "$n" ]
+then print_cmd+=(-n "$n")
+fi
+
+if [ -n "$N" ]
+then print_cmd+=(-N "$N")
+fi
+
+if [ -n "$print_cmd" ]
+then
+  vf="$vf,bmovl=0:0:$print_fifo"
+fi
+
+echo Printing overlay image:
+echo "${print_cmd[@]}"
+"${print_cmd[@]}"
+
+echo "Writing to fifo"
+mkfifo "$print_fifo"
+(echo "RGBA32 1280 56 0 664 0 1"; cat "$print_file"; echo -n SHOW; sleep 1d) > "$print_fifo" &
+
+echo "Starting mencoder"
+echo mencoder -quiet $fileopts $speedopts $timeopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts" -nosound -o "$output" "$@"
+nice -n 5 mencoder -quiet $fileopts $speedopts $timeopts -vf "$vf" -sws "$sws" -ovc x264 -x264encopts "$encopts"  -nosound -o "$output" "$@"
+
+echo "FINISHED"
+kill %1
+
+rm "$print_fifo"
+#rm "$print_file"
+
+ffmpeg -y -ss 60 -t 60  -i 05030958_0016.MP4 -r 30 -an -vf "crop=1280:664:0:16,pad=1280:720:0:0,setpts=1000*PTS/4004,drawtext=enable='between(t,5,10)':fontsize=30:fontfile=/usr/share/fonts/truetype/DejaVuSans-Bold.ttf:fontcolor=yellow:x=40:y=680:text=414" -q 30 -vcodec libx264 outf.mp4
+
+

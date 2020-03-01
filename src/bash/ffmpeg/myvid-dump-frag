@@ -47,7 +47,7 @@ shift $(($OPTIND - 1))
 pwd=`pwd`
 date=${pwd##*/}
 
-root_dir="/home/patryk/media/patczar.3t.2/mystore/jazdy/sytuacje"
+root_dir="$CARVIDREPO/sytuacje"
 dir="$root_dir/${date:0:4}/wycinki/${date:0:7}"
 
 first_file="$1"
@@ -63,7 +63,7 @@ if [ -n "$end" ]
 then
   ee=`printf %04d $end`
 else
-  ee=a000
+  ee=9999
 fi
 
 output="$dir/$date-${hhmm}_${ss}_${ee}${suffix}.mp4"

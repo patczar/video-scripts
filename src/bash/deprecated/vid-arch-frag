@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# (c) Patryk Czarnik
+# Distributed under MIT License. See LICENCE file in the root directory for details.
+
+# Command line processing
+usage="vid-arch-frag [options] infile [infile...]
+Copies a continuos fragment of a video encoding it in high quality without any filtering.
+The fragment may spread over a number of files in the input.
+Options:
+  -h  -- prints usage message
+  -o output_file -- sets output file
+  -s secs -- start offset (in the first source video)
+  -e secs -- end offset  (in the last source video)
+  -m -- 'mute', omit audio track(s)
+"
+
+# Codec settings
+
+codec="libx265 -preset slow -crf 23"
+
+while getopts "ho:s:e:m" opt; do
+  case "$opt" in
+  h|\?)
+     echo "$usage"
+     exit 1
+     ;;
+  o) output="$OPTARG"
+     ;;
+  s) start="$OPTARG"
+     ;;
+  e) end="$OPTARG"
+     ;;
+  m) mute=mute
+     ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+
+# Preparing the list of input files in a separate file - for "concat" demuxer
+SPEC_FILE="vid-dump-frag-spec.txt"
+
+> $SPEC_FILE
+
+n=0
+for file in "$@"
+do
+  n=$(($n + 1))
+  echo "file '$file'" >> $SPEC_FILE
+  if [ -n "$start" ]
+  then
+    echo "inpoint $start" >> $SPEC_FILE
+    start=
+  fi
+done
+if [ -n "$end" ]
+then
+  echo "outpoint $end" >> $SPEC_FILE
+  end=
+fi
+
+
+# Preparing and invoking the ffmpeg command  
+if [ -z "$output" ]
+then
+output="out.mp4"
+fi
+
+if [ -n "$mute" ]
+then
+audio="-an"
+else
+audio="-c:a copy"
+fi
+
+command="ffmpeg -noaccurate_seek -y -f concat -i $SPEC_FILE $audio -c:v $codec $output"
+
+echo $command
+
+$command
+
+rm "$SPEC_FILE"
