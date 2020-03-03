@@ -5,10 +5,9 @@
 # The set of tools is specially addressed to processing of car camera videos.
 
 
-### global constants and default settings ###
-
 # All submodules
 __all__ = [
+    'settings',
     'frames',
 ]
 
