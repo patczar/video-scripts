@@ -86,7 +86,7 @@ class AudioFrame(Frame):
 class VideoFrame(Frame):
     '''
     An object of this class represents a video frame from a multimedia file.
-    The meaning of this term and the details attached to it are taken from the ffmpeg tool.
+    The details attached to it are taken from the ffmpeg tool.
     '''
     def __init__(self, n, pts, time, pos, iskey, frame_type, checksum=None):
         super().__init__(n, pts, time, pos, checksum)
