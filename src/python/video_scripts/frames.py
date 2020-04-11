@@ -13,8 +13,8 @@ import os
 
 
 # Patterns for showinfo files
-pv = re.compile(r"\[Parsed_showinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+).+iskey:(\d)\s+type:(.)\s+checksum:([^\s]+).*")
-pa = re.compile(r"\[Parsed_ashowinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+)\s+fmt:\s*([^\s]+)\s+channels:\s*(\d+)\s+chlayout:\s*([^\s]+)\s+rate:\s*(\d+)\s+nb_samples:\s*(\d+)\s+checksum:\s*([^\s]+)\s+plane_checksums:\s*\[([^\]]+)].*")
+pv = re.compile(r"\[Parsed_showinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+)\s+fmt:\s*([^\s]+)\s+sar:\s*([^\s]+)\s+s:\s*([^\s]+)\s+i:\s*([^\s]+)\s+iskey:(\d)\s+type:(.)\s+checksum:([^\s]+)\s+plane_checksum:\s*\[([^\]]+)\]\s+mean:\s*\[([^\]]+)?\]\s+stdev:\s*\[([^\]]+)?\].*")
+pa = re.compile(r"\[Parsed_ashowinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+)\s+fmt:\s*([^\s]+)\s+channels:\s*(\d+)\s+chlayout:\s*([^\s]+)\s+rate:\s*(\d+)\s+nb_samples:\s*(\d+)\s+checksum:\s*([^\s]+)\s+plane_checksums:\s*\[([^\]]+)\].*")
 
 
 class Frame:
@@ -60,7 +60,7 @@ class Frame:
             return AudioFrame(ma[1], ma[2], ma[3], ma[4], ma[5], ma[6], ma[7], ma[8], ma[9], ma[10], ma[11])
         mv = pv.search(line)
         if(mv):
-            return VideoFrame(mv[1], mv[2], mv[3], mv[4], mv[5], mv[6], mv[7])
+            return VideoFrame(mv[1], mv[2], mv[3], mv[4], mv[5], mv[6], mv[7], mv[8], mv[9], mv[10], mv[11], mv[12], mv[13], mv[14])
         return None
 
     @staticmethod
@@ -69,6 +69,19 @@ class Frame:
             return [chunk for chunk in plane_checksums.split(' ') if chunk]
         else:
             return plane_checksums
+
+    @staticmethod
+    def prepare_plane_values(values_str):
+        result = []
+        for chunk in values_str.split(' '):
+            try:
+                result.append(int(chunk))
+            except:
+                try:
+                    result.append(float(chunk))
+                except:
+                    pass
+        return result
 
 
 class AudioFrame(Frame):
@@ -104,13 +117,19 @@ class VideoFrame(Frame):
     An object of this class represents a video frame from a multimedia file.
     The details attached to it are taken from the ffmpeg tool.
     '''
-    def __init__(self, n, pts, time, pos, iskey, frame_type, checksum=None):
-        super().__init__(n, pts, time, pos, checksum)
+    def __init__(self, n, pts, time, pos, fmt, sar, size, i, iskey, frame_type, checksum=None, plane_checksums=[], mean='', stdev=''):
+        super().__init__(n, pts, time, pos, checksum, plane_checksums)
+        self.fmt = fmt
+        self.sar = sar
+        self.size = size
+        self.i = i
         if type(iskey) == str:
             self.iskey = (iskey.strip() == '1')
         else:
             self.iskey = bool(iskey)
         self.type = str(frame_type)
+        self.mean = Frame.prepare_plane_values(mean)
+        self.stdev = Frame.prepare_plane_values(stdev)
 
     @property
     def iskey_num(self):
@@ -120,11 +139,19 @@ class VideoFrame(Frame):
     def kind(self):
         return 'V'
     
+    @property
+    def mean_str(self):
+        return ' '.join((str(x) for x in self.mean))
+
+    @property
+    def stdev_str(self):
+        return ' '.join((str(x) for x in self.stdev))
+
     def __str__(self):
         return 'V frame no %d, pts: %d, time: %f, type: %d' % (self.n, self.pts , self.time, self.type)
 
     def csv_fields(self):
-        return ['V', self.n, self.pts , self.time, self.pos, self.iskey_num, self.type, self.checksum]    
+        return ['V', self.n, self.pts , self.time, self.pos, self.fmt, self.sar, self.size, self.i, self.iskey_num, self.type, self.checksum, self.plane_checksums_str, self.mean_str, self.stdev_str]
     
     @staticmethod
     def of_csv_fields(fields:List[str]):
