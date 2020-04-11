@@ -14,17 +14,18 @@ import os
 
 # Patterns for showinfo files
 pv = re.compile(r"\[Parsed_showinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+).+iskey:(\d)\s+type:(.)\s+checksum:([^\s]+).*")
-pa = re.compile(r"\[Parsed_ashowinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+).+nb_samples:(\d+)\s+checksum:([^\s]+).*")
+pa = re.compile(r"\[Parsed_ashowinfo.*\]\s+n:\s*(\d+)\s+pts:\s*(\d+)\s+pts_time:\s*(\d+(?:\.\d+)?)\s+pos:\s*(\d+)\s+fmt:\s*([^\s]+)\s+channels:\s*(\d+)\s+chlayout:\s*([^\s]+)\s+rate:\s*(\d+)\s+nb_samples:\s*(\d+)\s+checksum:\s*([^\s]+)\s+plane_checksums:\s*\[([^\]]+)].*")
 
 
 class Frame:
     '''Abstract class representing a frame in a multimedia file.'''
-    def __init__(self, n, pts, time, pos, checksum=None):
+    def __init__(self, n, pts, time, pos, checksum=None, plane_checksums=[]):
         self.n = int(n)
         self.pts = int(pts)
         self.time = float(time)
         self.pos = int(pos)
         self.checksum = checksum
+        self.plane_checksums = Frame.prepare_plane_checksums(plane_checksums)
 
     def __str__(self):
         return 'frame no %d, pts: %d, time: %f' % (self.n, self.pts , self.time)
@@ -33,6 +34,10 @@ class Frame:
     def kind(self):
         return 'F'
     
+    @property
+    def plane_checksums_str(self):
+        return ' '.join(self.plane_checksums)
+
     def csv_fields(self):
         raise NotImplementedError('This is abstract method, should be implemented in subclasses')
     
@@ -52,11 +57,18 @@ class Frame:
     def of_showinfo_line(line:str):
         ma = pa.search(line)
         if(ma):
-            return AudioFrame(ma[1], ma[2], ma[3], ma[4], ma[5], ma[6])
+            return AudioFrame(ma[1], ma[2], ma[3], ma[4], ma[5], ma[6], ma[7], ma[8], ma[9], ma[10], ma[11])
         mv = pv.search(line)
         if(mv):
             return VideoFrame(mv[1], mv[2], mv[3], mv[4], mv[5], mv[6], mv[7])
         return None
+
+    @staticmethod
+    def prepare_plane_checksums(plane_checksums):
+        if type(plane_checksums) == str:
+            return [chunk for chunk in plane_checksums.split(' ') if chunk]
+        else:
+            return plane_checksums
 
 
 class AudioFrame(Frame):
@@ -64,19 +76,23 @@ class AudioFrame(Frame):
     An object of this class represents an audio frame from a multimedia file.
     The meaning of this term and the details attached to it are taken from the ffmpeg tool.
     '''
-    def __init__(self, n, pts, time, pos, samples, checksum=None):
-        super().__init__(n, pts, time, pos, checksum)
+    def __init__(self, n, pts, time, pos, fmt, channels, chlayout, rate, samples, checksum=None, plane_checksums=[]):
+        super().__init__(n, pts, time, pos, checksum, plane_checksums)
+        self.fmt = fmt
+        self.channels = int(channels)
+        self.chlayout = chlayout
+        self.rate = int(rate)
         self.samples = int(samples)
 
     def __str__(self):
-        return 'A frame no %d, pts: %d, time: %f, samples: %d' % (self.n, self.pts , self.time, self.samples)
+        return 'A frame no %d, pts: %d, time: %f, samples: %d' % (self.n, self.pts, self.time, self.samples)
     
     @property
     def kind(self):
         return 'A'
     
     def csv_fields(self):
-        return ['A', self.n, self.pts , self.time, self.pos, self.samples, self.checksum]
+        return ['A', self.n, self.pts , self.time, self.pos, self.fmt, self.channels, self.chlayout, self.rate, self.samples, self.checksum, self.plane_checksums_str]
     
     @staticmethod
     def of_csv_fields(fields:List[str]):
