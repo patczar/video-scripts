@@ -7,7 +7,7 @@
 CSV_SEPARATOR = ';'
 
 DEFAULT_FRAME_DIR = 'frames_cache'
-DEFAULT_FRAME_TXT_SUFFUX = '.frames'
-DEFAULT_FRAME_CSV_SUFFUX = '.frames.csv'
-DEFAULT_AFRAME_CSV_SUFFUX = '.aframes.csv'
-DEFAULT_VFRAME_CSV_SUFFUX = '.vframes.csv'
+DEFAULT_FRAME_TXT_SUFFIX = '.frames'
+DEFAULT_FRAME_CSV_SUFFIX = '.frames.csv'
+DEFAULT_AFRAME_CSV_SUFFIX = '.aframes.csv'
+DEFAULT_VFRAME_CSV_SUFFIX = '.vframes.csv'

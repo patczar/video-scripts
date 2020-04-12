@@ -8,7 +8,7 @@ import re
 import sys
 from typing import List
 
-from .settings import CSV_SEPARATOR, DEFAULT_FRAME_DIR, DEFAULT_FRAME_CSV_SUFFUX, DEFAULT_AFRAME_CSV_SUFFUX, DEFAULT_VFRAME_CSV_SUFFUX, DEFAULT_FRAME_TXT_SUFFUX
+from .settings import CSV_SEPARATOR, DEFAULT_FRAME_DIR, DEFAULT_FRAME_CSV_SUFFIX, DEFAULT_AFRAME_CSV_SUFFIX, DEFAULT_VFRAME_CSV_SUFFIX, DEFAULT_FRAME_TXT_SUFFIX
 import os
 
 
@@ -127,7 +127,7 @@ class VideoFrame(Frame):
             self.iskey = (iskey.strip() == '1')
         else:
             self.iskey = bool(iskey)
-        self.type = str(frame_type)
+        self.frame_type = str(frame_type)
         self.mean = Frame.prepare_plane_values(mean)
         self.stdev = Frame.prepare_plane_values(stdev)
 
@@ -148,10 +148,10 @@ class VideoFrame(Frame):
         return ' '.join((str(x) for x in self.stdev))
 
     def __str__(self):
-        return 'V frame no %d, pts: %d, time: %f, type: %d' % (self.n, self.pts , self.time, self.type)
+        return 'V frame no %d, pts: %d, time: %f, type: %s' % (self.n, self.pts , self.time, self.frame_type)
 
     def csv_fields(self):
-        return ['V', self.n, self.pts , self.time, self.pos, self.fmt, self.sar, self.size, self.i, self.iskey_num, self.type, self.checksum, self.plane_checksums_str, self.mean_str, self.stdev_str]
+        return ['V', self.n, self.pts , self.time, self.pos, self.fmt, self.sar, self.size, self.i, self.iskey_num, self.frame_type, self.checksum, self.plane_checksums_str, self.mean_str, self.stdev_str]
     
     @staticmethod
     def of_csv_fields(fields:List[str]):
@@ -243,11 +243,11 @@ def make_frames_for_video_file(video_file_path:str, txt_file_path:str,
 
 
 def make_frames_for_video_files(video_files:List[str], do_audio=True, do_video=True,
-                               directory=DEFAULT_FRAME_DIR,
-                               txt_suffix=DEFAULT_FRAME_TXT_SUFFUX,
-                               common_csv_suffix=DEFAULT_FRAME_CSV_SUFFUX,
-                               audio_csv_suffix=DEFAULT_AFRAME_CSV_SUFFUX,
-                               video_csv_suffix=DEFAULT_VFRAME_CSV_SUFFUX):
+                                directory=DEFAULT_FRAME_DIR,
+                                txt_suffix=DEFAULT_FRAME_TXT_SUFFIX,
+                                common_csv_suffix=DEFAULT_FRAME_CSV_SUFFIX,
+                                audio_csv_suffix=DEFAULT_AFRAME_CSV_SUFFIX,
+                                video_csv_suffix=DEFAULT_VFRAME_CSV_SUFFIX):
     os.makedirs(directory, exist_ok=True)
     for video_file in video_files:
         txt_file_path = f'{directory}/{video_file}{txt_suffix}'
