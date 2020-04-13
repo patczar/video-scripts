@@ -6,21 +6,23 @@
 from .command_base import *
 from collections.abc import Collection
 
+def ident(x):
+    return x
+
 def default_string(value):
     return '' if value is None else str(value)
 
-def default_list(value):
-    if isinstance(value, list): return value
+def default_list(value, mapper=ident):
     if value is None: return []
-    if isinstance(value, str): return [value]
-    if isinstance(value, Collection): return list(value)
-    return [value]
+    if isinstance(value, str): return [mapper(value)]
+    if isinstance(value, Collection): return [mapper(x) for x in value]
+    return [mapper(value)]
 
 
 class FFMPEG(AbstractCommand):
     def __init__(self, inputs=None, output=None, filters=None, maps=None, codecs=None):
         super().__init__()
-        self.inputs = default_list(inputs)
+        self.inputs = default_list(inputs, FFInput.of)
         self.output = default_string(output)
         self.filters = default_list(filters)
         self.codecs = default_list(codecs)
@@ -28,6 +30,28 @@ class FFMPEG(AbstractCommand):
 
     def getText(self):
         return f'ffmpeg {Textible.getTextForCollection(self.inputs)} {Textible.getTextFor(self.filters)} {Textible.getTextForCollection(self.codecs)} {self.output}'
+
+
+class FFInput(Textible):
+    def __init__(self, url, format=None, **options):
+        self.url = url
+        self.format = format
+        self.options = options
+
+    def getText(self):
+        result = ''
+        if self.format:
+            result += f'-f {self.format} '
+        for option, value in self.options.items():
+            result += f'-{option} {value}'
+        result += f'-i {self.url}'
+        return result
+
+    @staticmethod
+    def of(obj):
+        if isinstance(obj, FFInput): return obj
+        if isinstance(obj, str): return FFInput(obj)
+
 
 
 class FFFilterGraph(Textible):
