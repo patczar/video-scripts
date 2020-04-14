@@ -7,25 +7,25 @@ from abc import ABC, abstractmethod, abstractproperty
 from collections.abc import Iterable
 
 
-class Textible(ABC):
+class Scriptable(ABC):
     @abstractmethod
-    def getText(self):
+    def getScript(self):
         return ''
 
     @staticmethod
-    def getTextFor(obj, sep=' '):
+    def scriptFor(obj, sep=' '):
         if obj is None: return ''
         if isinstance(obj, str): return obj
-        if isinstance(obj, Textible): return obj.getText()
-        if isinstance(obj, Iterable): return Textible.getTextForCollection(obj, sep)
+        if isinstance(obj, Scriptable): return obj.getScript()
+        if isinstance(obj, Iterable): return Scriptable.scriptForCollection(obj, sep)
         return str(obj)
 
     @staticmethod
-    def getTextForCollection(collection, sep=' '):
-        return sep.join(Textible.getTextFor(item) for item in collection)
+    def scriptForCollection(collection, sep=' '):
+        return sep.join(Scriptable.scriptFor(item) for item in collection)
 
 
-class AbstractCommand(Textible):
+class AbstractCommand(Scriptable):
     def run(self):
         pass # TODO
 

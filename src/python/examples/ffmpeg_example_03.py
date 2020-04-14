@@ -1,6 +1,6 @@
 from video_scripts.ffmpeg import FFMPEG, FFFilterGraph, FFFilterChain, FFFilter
 
-cmd1 = FFMPEG(inputs='in1.avi', output='out.mp4')
+cmd1 = FFMPEG(inputs='in1.avi', outputs='out.mp4')
 
 f1 = FFFilter('format', 'yuv420p')
 f2 = FFFilter('scale')
@@ -25,4 +25,4 @@ cmd1.filters.newChain('AA', 'BB')\
     .addStep(FFFilter('eq', gamma=1.3, contrast=1.05, saturation=1.03))
 
 
-print(cmd1.getText())
+print(cmd1.getScript())
