@@ -37,3 +37,13 @@ def default_list(value, mapper=ident):
     return [mapper(value)]
 
 
+def try_read_number(s:str):
+    if s is None:
+        return None
+    try:
+        return int(s.strip())
+    except:
+        try:
+            return float(s.strip())
+        except:
+            return s
