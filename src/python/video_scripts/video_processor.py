@@ -5,10 +5,44 @@
 from abc import ABC, abstractmethod
 
 from video_scripts.commons import try_read_number
+from video_scripts.ffmpeg import FFMPEG, FFInput, FFFilterChain, FFFilterGraph, FFFilter, FFOutput
 
 
-def vid_process(script, out):
+def vid_process(script):
     scr = parse_script_file(script)
+
+    output = FFOutput('out.mp4')
+
+    inputs = []
+    input_nr = 0
+
+    input_chains = []
+    vlabels = []
+
+    for step in scr.steps:
+        print(step)
+        if step.whoAreYou() == 'file':
+            inputs.append(FFInput(step.path))
+            lbl = f'v{input_nr}'
+            input_chains.append(FFFilterChain(f'{input_nr}:0', lbl))
+            vlabels.append(lbl)
+            input_nr += 1
+
+    filtergraph = FFFilterGraph()
+    for chain in input_chains:
+        filtergraph.addChain(chain)
+
+    concat_chain = FFFilterChain(start_labels=vlabels, end_labels='vout', steps=FFFilter('concat',n=input_nr ,v=1, a=0))
+    filtergraph.addChain(concat_chain)
+
+    output.maps.append('vout')
+
+    ffmpeg = FFMPEG(inputs=inputs, outputs=output, filters=filtergraph)
+
+    print(ffmpeg.getScript())
+
+
+
 
 class SomeSpec(ABC):
     @abstractmethod
@@ -25,6 +59,9 @@ class FileSpec(SomeSpec):
     def whoAreYou(self):
         return 'file'
 
+    def __str__(self):
+        return f'FILE {self.path} {self.start}:{self.end}'
+
 
 class OptionSpec(SomeSpec):
     def __init__(self, what, params=None):
@@ -36,6 +73,9 @@ class OptionSpec(SomeSpec):
 
     def whoAreYou(self):
         return self.what
+
+    def __str__(self):
+        return f'-{self.what}' + ''.join(f' {name}={arg}' for name, arg in self.params.items())
 
 
 
@@ -59,7 +99,7 @@ def parse_script_file(path):
     with open(path, mode='r', encoding='utf-8') as file:
         for line in file:
             step = parse_line(line)
-            if step in None: continue
+            if step is None: continue
             script.addStep(step)
     return script
 

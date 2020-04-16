@@ -101,9 +101,9 @@ class FFFilterGraph(Scriptable):
 
 
 class FFFilterChain(Scriptable):
-    def __init__(self, start_label=None, end_label=None, steps=None):
-        self.start_label = start_label
-        self.end_label = end_label
+    def __init__(self, start_labels=None, end_labels=None, steps=None):
+        self.start_labels = default_list(start_labels)
+        self.end_labels = default_list(end_labels)
         self.steps = default_list(steps)
 
     @staticmethod
@@ -113,11 +113,14 @@ class FFFilterChain(Scriptable):
 
     def getScript(self):
         result = ''
-        if self.start_label:
-            result += f'[{self.start_label}]'
-        result += Scriptable.scriptForCollection(self.steps, ',')
-        if self.end_label:
-            result += f'[{self.end_label}]'
+        for lbl in self.start_labels:
+            result += f'[{lbl}]'
+        if not self.steps:
+            result += 'null'
+        else:
+            result += Scriptable.scriptForCollection(self.steps, ',')
+        for lbl in self.end_labels:
+            result += f'[{lbl}]'
         return result
 
     def addStep(self, step):
