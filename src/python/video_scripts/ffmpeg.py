@@ -34,6 +34,9 @@ class FFInputOutput(Scriptable):
         result += f' {self.before_file()}{self.file}'
         return result
 
+    def addOption(self, name, value):
+        self.options[name] = value
+
     @abstractmethod
     def before_file(self):
         return ''
@@ -64,7 +67,7 @@ class FFOutput(FFInputOutput):
         return ''
 
     def specialOptions(self):
-        return ' '.join(f'-map {map}' for map in self.maps)
+        return ' '.join(f'-map [{map}]' for map in self.maps)
 
 
 class FFFilterGraph(Scriptable):

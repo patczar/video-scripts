@@ -8,40 +8,59 @@ from video_scripts.commons import try_read_number
 from video_scripts.ffmpeg import FFMPEG, FFInput, FFFilterChain, FFFilterGraph, FFFilter, FFOutput
 
 
+TRIM_STRATEGY = 'TRIM_STRATEGY_ARGS'
+
+
 def vid_process(script):
     scr = parse_script_file(script)
 
-    output = FFOutput('out.mp4')
-
-    inputs = []
-    input_nr = 0
-
-    input_chains = []
-    vlabels = []
+    builder = VidProcessBuilder()
 
     for step in scr.steps:
         print(step)
         if step.whoAreYou() == 'file':
-            inputs.append(FFInput(step.path))
-            lbl = f'v{input_nr}'
-            input_chains.append(FFFilterChain(f'{input_nr}:0', lbl))
-            vlabels.append(lbl)
-            input_nr += 1
+            builder.accept_file(step)
 
-    filtergraph = FFFilterGraph()
-    for chain in input_chains:
-        filtergraph.addChain(chain)
-
-    concat_chain = FFFilterChain(start_labels=vlabels, end_labels='vout', steps=FFFilter('concat',n=input_nr ,v=1, a=0))
-    filtergraph.addChain(concat_chain)
-
-    output.maps.append('vout')
-
-    ffmpeg = FFMPEG(inputs=inputs, outputs=output, filters=filtergraph)
+    ffmpeg = builder.createFFMPEG()
 
     print(ffmpeg.getScript())
 
 
+class VidProcessBuilder:
+    def __init__(self):
+        self.inputs = []
+        self.input_nr = 0
+        self.input_chains = []
+        self.vlabels = []
+        self.output = self.default_output()
+
+    def default_output(self):
+        return FFOutput('out.mp4')
+
+    def accept_file(self, file_step):
+        file_spec = FFInput(file_step.path)
+        if TRIM_STRATEGY == 'TRIM_STRATEGY_ARGS':
+            if file_step.start:
+                file_spec.addOption('ss', file_step.start)
+            if file_step.end:
+                file_spec.addOption('t', file_step.end)
+
+        self.inputs.append(file_spec)
+        lbl = f'v{self.input_nr}'
+        self.input_chains.append(FFFilterChain(f'{self.input_nr}:0', lbl))
+        self.vlabels.append(lbl)
+        self.input_nr += 1
+
+    def createFFMPEG(self):
+        filtergraph = FFFilterGraph()
+        for chain in self.input_chains:
+            filtergraph.addChain(chain)
+
+        concat_chain = FFFilterChain(start_labels=self.vlabels, end_labels='vout',
+                                     steps=FFFilter('concat', n=self.input_nr, v=1, a=0))
+        filtergraph.addChain(concat_chain)
+        self.output.maps.append('vout')
+        return FFMPEG(inputs=self.inputs, outputs=self.output, filters=filtergraph)
 
 
 class SomeSpec(ABC):
