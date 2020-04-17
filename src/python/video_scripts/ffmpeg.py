@@ -6,16 +6,27 @@
 from .command_base import *
 from .commons import *
 
+
 class FFMPEG(AbstractCommand):
-    def __init__(self, inputs=None, outputs=None, filters=None, codecs=None):
+    def __init__(self, inputs=None, outputs=None, global_options=None, filters=None, codecs=None):
         super().__init__()
         self.inputs = default_list(inputs, FFInput.of)
         self.outputs = default_list(outputs, FFOutput.of)
+        self.global_options = default_dict(global_options)
         self.filters = FFFilterGraph.of(filters)
         self.codecs = default_list(codecs)
 
     def getScript(self):
-        return f'ffmpeg {Scriptable.scriptForCollection(self.inputs)} {Scriptable.scriptFor(self.filters)} {Scriptable.scriptForCollection(self.codecs)} {Scriptable.scriptForCollection(self.outputs)}'
+        return 'ffmpeg' \
+                + ' ' + print_options(self.global_options) \
+                + ' ' + Scriptable.scriptForCollection(self.inputs) \
+                + ' ' + Scriptable.scriptFor(self.filters) \
+                + ' ' + Scriptable.scriptForCollection(self.codecs) \
+                + ' ' + Scriptable.scriptForCollection(self.outputs)
+
+
+def print_options(options):
+    return ' '.join(f'-{option} {Scriptable.scriptFor(value)}' for option, value in options.items())
 
 
 class FFInputOutput(Scriptable):
@@ -28,8 +39,7 @@ class FFInputOutput(Scriptable):
         result = ''
         if self.format:
             result += f'-f {self.format} '
-        for option, value in self.options.items():
-            result += f'-{option} {value}'
+        result += print_options(self.options)
         result += self.specialOptions()
         result += f' {self.before_file()}{self.file}'
         return result
