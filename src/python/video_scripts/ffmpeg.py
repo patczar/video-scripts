@@ -7,52 +7,60 @@ from .command_base import *
 from .commons import *
 
 
-class FFMPEG(AbstractCommand):
+class FFMPEG(ACommand):
     def __init__(self, inputs=None, outputs=None, global_options=None, filters=None, codecs=None):
         super().__init__()
-        self.inputs = default_list(inputs, FFInput.of)
-        self.outputs = default_list(outputs, FFOutput.of)
-        self.global_options = default_dict(global_options)
-        self.filters = FFFilterGraph.of(filters)
-        self.codecs = default_list(codecs)
+        self._inputs = default_list(inputs, FFInput.of)
+        self._outputs = default_list(outputs, FFOutput.of)
+        self._global_options = default_dict(global_options, mapper2=FFGlobalOption.of)
+        self._filters = FFFilterGraph.of(filters)
+        self._codecs = default_list(codecs)
 
-    def getScript(self):
-        return 'ffmpeg' \
-                + ' ' + print_options(self.global_options) \
-                + ' ' + Scriptable.scriptForCollection(self.inputs) \
-                + ' ' + Scriptable.scriptFor(self.filters) \
-                + ' ' + Scriptable.scriptForCollection(self.codecs) \
-                + ' ' + Scriptable.scriptForCollection(self.outputs)
+    def cmd(self):
+        return 'ffmpeg'
+
+    def options(self):
+        return cmd_elements_for(self._global_options, self._inputs, self._filters, self._codecs, self._outputs)
 
 
-def print_options(options):
-    return ' '.join(f'-{option} {Scriptable.scriptFor(value)}' for option, value in options.items())
+class FFGlobalOption(ACommandFragment):
+    def __init__(self, name, *parameters):
+        self._name = name
+        self._parameters = default_list(parameters)
+
+    def cmd_elements(self) -> t.Sequence[str]:
+        return ['-' + self._name] + self._parameters
+
+    @staticmethod
+    def of(name, value):
+        if isinstance(value, Sequence) and not isinstance(value, str):
+            return FFGlobalOption(name, *value)
+        else:
+            return FFGlobalOption(name, value)
 
 
-class FFInputOutput(Scriptable):
+class FFInputOutput(ACommandFragment):
     def __init__(self, file, format=None, **options):
-        self.file = file
-        self.format = format
-        self.options = options
+        self._file = file
+        self._format = format
+        self._options = default_dict(options)
 
-    def getScript(self):
-        result = ''
-        if self.format:
-            result += f'-f {self.format} '
-        result += print_options(self.options)
-        result += self.specialOptions()
-        result += f' {self.before_file()}{self.file}'
+    def cmd_elements(self):
+        result = []
+        if self._format:
+            result.append('-f')
+            result.append(self._format)
+        result.extend(cmd_elements_for(self._options))
+        result.extend(cmd_elements_for(self.options_before_file()))
+        result.append(self._file)
         return result
 
     def addOption(self, name, value):
-        self.options[name] = value
+        self._options[name] = value
 
     @abstractmethod
-    def before_file(self):
-        return ''
-
-    def specialOptions(self):
-        return ''
+    def options_before_file(self):
+        return []
 
     @classmethod
     def of(cls, obj):
@@ -64,25 +72,26 @@ class FFInput(FFInputOutput):
     def __init__(self, file, format=None, **options):
         super().__init__(file, format, **options)
 
-    def before_file(self):
-        return '-i '
+    def options_before_file(self):
+        return ['-i']
 
 
 class FFOutput(FFInputOutput):
     def __init__(self, file, format=None, maps=None, **options):
         super().__init__(file, format, **options)
-        self.maps = default_list(maps)
+        self._maps = default_list(maps)
 
-    def before_file(self):
-        return ''
+    def options_before_file(self):
+        result = []
+        for m in self._maps:
+            result.append('-map')
+            result.append(m)
+        return result
 
-    def specialOptions(self):
-        return ' '.join(f'-map [{map}]' for map in self.maps)
 
-
-class FFFilterGraph(Scriptable):
+class FFFilterGraph(ACommandFragment):
     def __init__(self):
-        self.chains = []
+        self._chains = []
 
     @staticmethod
     def of(obj):
@@ -90,76 +99,76 @@ class FFFilterGraph(Scriptable):
         elif isinstance(obj, FFFilterGraph): return obj
         elif isinstance(obj, FFFilterChain):
             result = FFFilterGraph()
-            result.chains = [obj]
+            result._chains = [obj]
             return result
         else:
             result = FFFilterGraph()
-            result.chains = [FFFilterChain().of(obj)]
+            result._chains = [FFFilterChain.of(obj)]
             return result
 
-    def getScript(self):
-        if len(self.chains) == 0:
-            return ''
+    def cmd_elements(self) -> t.Sequence[str]:
+        if len(self._chains) == 0:
+            return []
         else:
-            return f'-filter_complex "{Scriptable.scriptForCollection(self.chains, ";")}"'
+            return ['-filter_complex', '"' + ';'.join(chain.cmd_string() for chain in self._chains) + '"']
 
-    def addChain(self, chain):
-        self.chains.append(chain)
+    def add_chain(self, chain):
+        self._chains.append(chain)
         return self
 
-    def newChain(self, start_label=None, end_label=None):
+    def new_chain(self, start_label=None, end_label=None):
         chain = FFFilterChain(start_label, end_label)
-        self.chains.append(chain)
+        self._chains.append(chain)
         return chain
 
 
-class FFFilterChain(Scriptable):
+class FFFilterChain:
     def __init__(self, start_labels=None, end_labels=None, steps=None):
-        self.start_labels = default_list(start_labels)
-        self.end_labels = default_list(end_labels)
-        self.steps = default_list(steps)
+        self._start_labels = default_list(start_labels)
+        self._end_labels = default_list(end_labels)
+        self._steps = default_list(steps)
 
     @staticmethod
     def of(obj):
         if isinstance(obj, FFFilterChain): return obj
         else: return FFFilterChain(steps=obj)
 
-    def getScript(self):
+    def cmd_string(self):
         result = ''
-        for lbl in self.start_labels:
+        for lbl in self._start_labels:
             result += f'[{lbl}]'
-        if not self.steps:
+        if not self._steps:
             result += 'null'
         else:
-            result += Scriptable.scriptForCollection(self.steps, ',')
-        for lbl in self.end_labels:
+            result += ','.join(chain.cmd_string() for chain in self._steps)
+        for lbl in self._end_labels:
             result += f'[{lbl}]'
         return result
 
-    def addStep(self, step):
-        self.steps.append(step)
+    def add_step(self, step):
+        self._steps.append(step)
         return self
 
 
-class FFFilter(Scriptable):
+class FFFilter:
     def __init__(self, name, *args, **kwargs):
-        self.name = name
-        self.parameters = []
+        self._name = name
+        self._parameters = []
         for arg in args:
-            self.addParameter('', arg)
+            self.add_parameter('', arg)
         for key, arg in kwargs.items():
-            self.addParameter(key, arg)
+            self.add_parameter(key, arg)
 
     @staticmethod
     def of(obj):
         if isinstance(obj, FFFilter): return obj
         else: raise TypeError(f'Cannot create FFFilter from a {type(obj)}')
 
-    def getScript(self):
-        result = self.name
-        if len(self.parameters) > 0:
+    def cmd_string(self):
+        result = self._name
+        if len(self._parameters) > 0:
             result += '='
-        for i, (par_name, par_value) in enumerate(self.parameters):
+        for i, (par_name, par_value) in enumerate(self._parameters):
             if i > 0:
                 result += ':'
             if par_name:
@@ -168,15 +177,16 @@ class FFFilter(Scriptable):
 
         return result
 
-    def addParameter(self, name='', value=''):
-        self.parameters.append((name, value))
+    def add_parameter(self, name='', value=''):
+        self._parameters.append((name, value))
         return self
+
 
     ESCAPED_CHARS = {',', ':', ';', '\\'}
     @staticmethod
     def escape_parameter_value(value):
         if(not isinstance(value, str)):
-            return str(value)
+            value = str(value)
         if set(value) & FFFilter.ESCAPED_CHARS:
             return ''.join('\\'+ch if ch in FFFilter.ESCAPED_CHARS else ch for ch in value)
         return value

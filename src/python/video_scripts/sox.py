@@ -8,21 +8,25 @@ from .commons import *
 
 from collections.abc import Sequence
 
-class SOX(AbstractCommand):
+
+class SOX(ACommand):
     def __init__(self, inputs=None, output=None, effects=None):
         super().__init__()
         self.inputs = default_list(inputs)
         self.output = output
         self.effects = default_list(effects, mapper=SOXEffect.of)
 
-    def getScript(self):
-        return f'sox {Scriptable.scriptForCollection(self.inputs)} {Scriptable.scriptFor(self.output)} {Scriptable.scriptForCollection(self.effects)}'
+    def cmd(self) -> str:
+        return 'sox'
 
-    def addEffect(self, effect):
+    def options(self) -> t.Sequence[str]:
+        return cmd_elements_for(self.inputs, self.output, self.effects)
+
+    def add_effect(self, effect):
         self.effects.append(SOXEffect.of(effect))
 
 
-class SOXEffect(Scriptable):
+class SOXEffect(ACommandFragment):
     def __init__(self, name, *args):
         self.name = name
         self.args = default_list(args)
@@ -37,5 +41,5 @@ class SOXEffect(Scriptable):
             return SOXEffect(*obj)
         raise TypeError
 
-    def getScript(self):
-        return self.name + ' ' + ' '.join(str(arg) for arg in self.args)
+    def cmd_elements(self):
+        return [self.name] + [str(arg) for arg in self.args]

@@ -14,7 +14,7 @@ def vid_process(script):
 
     builder = VidProcessBuilder()
 
-    for step in scr.steps:
+    for step in scr._steps:
         print(step)
         builder.next_step(step)
 
@@ -25,6 +25,18 @@ def vid_process(script):
 option_names_mappers = {
     'global': {
         'overwrite': 'y',
+    },
+    'codec': {
+        'codec': 'c:v',
+        'profile': 'profile:v',
+        'preset': 'preset',
+    },
+    'filter': {
+        'crop': 'crop',
+        'scale': 'scale',
+    },
+    'eq': {
+        'gamma': 'gamma',
     },
 }
 
@@ -74,29 +86,35 @@ class VidProcessBuilder:
                 option = option_names_mappers['global'][option]
                 self.global_options[option] = value
 
-    def accept_input_settings(self, option_spec):
+    def accept_input_settings(self, option_spec:OptionSpec):
         pass
 
-    def accept_output_settings(self, option_spec):
+    def accept_output_settings(self, option_spec:OptionSpec):
+        for option, value in option_spec.params.items():
+            if option == 'out':
+                self.output._file = value
+            elif option in option_names_mappers['codec']:
+                option = option_names_mappers['codec'][option]
+                self.output.addOption(option, value)
+                
+
+    def accept_video_settings(self, option_spec:OptionSpec):
         pass
 
-    def accept_video_settings(self, option_spec):
+    def accept_audio_settings(self, option_spec:OptionSpec):
         pass
 
-    def accept_audio_settings(self, option_spec):
-        pass
-
-    def accept_speed_settings(self, option_spec):
+    def accept_speed_settings(self, option_spec:OptionSpec):
         pass
 
     def createFFMPEG(self):
         filtergraph = FFFilterGraph()
         for chain in self.input_chains:
-            filtergraph.addChain(chain)
+            filtergraph.add_chain(chain)
 
         concat_chain = FFFilterChain(start_labels=self.vlabels, end_labels='vout',
                                      steps=FFFilter('concat', n=self.input_nr, v=1, a=0))
-        filtergraph.addChain(concat_chain)
-        self.output.maps.append('vout')
+        filtergraph.add_chain(concat_chain)
+        self.output._maps.append('vout')
         return FFMPEG(inputs=self.inputs, outputs=self.output, global_options=self.global_options, filters=filtergraph)
 

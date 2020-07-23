@@ -37,30 +37,31 @@ def default_list(value, mapper=ident):
     return [mapper(value)]
 
 
-def default_dict(value, mapper=lambda x: (x, None)):
+def default_dict(value, mapper=lambda x: (x, None), mapper2=lambda x, y: (x, y)):
     def iterpret_item(item):
         if item is None: return None
         if isinstance(value, Sequence) and not isinstance(value, str) and len(value) == 1:
             return iterpret_item(item[0])
         if isinstance(value, Sequence) and not isinstance(value, str) and len(value) == 2:
-            return (value[0], value[1])
+            return mapper2(value[0], value[1])
         if isinstance(value, Sequence) and not isinstance(value, str) and len(value) > 2:
-            return (value[0], value[1:])
+            return mapper2(value[0], value[1:])
         (k, v) = mapper(item)
         return (k, v)
 
     if value is None: return {}
     if isinstance(value, Mapping) and hasattr(value, 'items'):
-        return {k:v for k, v in value.items()}
+        return dict(mapper2(k, v) for k, v in value.items())
     # special treatment of a single tuple of size 2: as key->value
     if isinstance(value, tuple) and len(value) == 2:
-        return {value[0]: value[1]}
+        k, v = mapper2(*value)
+        return {k: v}
     if isinstance(value, Iterable) and not isinstance(value, str):
-        return {(iterpret_item(item) for item in value)}
+        return dict(iterpret_item(item) for item in value)
     return iterpret_item(value)
 
 
-def try_read_number(s:str):
+def try_read_number(s: str):
     if s is None:
         return None
     try:
