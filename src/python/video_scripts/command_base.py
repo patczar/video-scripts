@@ -19,7 +19,7 @@ class ACommandFragment(ABC):
         return []
 
     def cmd_string(self) -> str:
-        return ' '.join(self.cmd_elements())
+        return ' '.join(str(el) for el in self.cmd_elements())
 
     def __str__(self) -> str:
         return self.cmd_string()

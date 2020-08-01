@@ -14,12 +14,12 @@ def vid_process(script):
 
     builder = VidProcessBuilder()
 
-    for step in scr._steps:
+    for step in scr.steps:
         print(step)
         builder.next_step(step)
 
     ffmpeg = builder.createFFMPEG()
-    print(ffmpeg.getScript())
+    print(ffmpeg)
 
 
 option_names_mappers = {
@@ -108,6 +108,8 @@ class VidProcessBuilder:
         pass
 
     def createFFMPEG(self):
+        goptions = [FFGlobalOption.of(name, value) for name, value in self.global_options.items()]
+
         filtergraph = FFFilterGraph()
         for chain in self.input_chains:
             filtergraph.add_chain(chain)
@@ -116,5 +118,5 @@ class VidProcessBuilder:
                                      steps=FFFilter('concat', n=self.input_nr, v=1, a=0))
         filtergraph.add_chain(concat_chain)
         self.output._maps.append('vout')
-        return FFMPEG(inputs=self.inputs, outputs=self.output, global_options=self.global_options, filters=filtergraph)
+        return FFMPEG(inputs=self.inputs, outputs=self.output, global_options=goptions, filters=filtergraph)
 

@@ -12,7 +12,7 @@ class FFMPEG(ACommand):
         super().__init__()
         self._inputs = default_list(inputs, FFInput.of)
         self._outputs = default_list(outputs, FFOutput.of)
-        self._global_options = default_dict(global_options, mapper2=FFGlobalOption.of)
+        self._global_options = default_list(global_options)
         self._filters = FFFilterGraph.of(filters)
         self._codecs = default_list(codecs)
 
