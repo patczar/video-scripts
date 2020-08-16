@@ -9,7 +9,11 @@ public class FFInput extends FFInputOutput<FFInput> {
 	
 	@Override
 	protected Optional<String> beforeFileName() {
-		return Optional.of("-f");
+		return Optional.of("-i");
+	}
+
+	public static FFInput forFile(String file) {
+		return new FFInput(file);
 	}
 	
 }

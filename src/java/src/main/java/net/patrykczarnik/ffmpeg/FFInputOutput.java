@@ -8,7 +8,7 @@ import java.util.Optional;
 import net.patrykczarnik.commands.CmdUtils;
 import net.patrykczarnik.commands.CommandFragment;
 
-abstract class FFInputOutput<S extends FFInputOutput> implements CommandFragment {
+abstract class FFInputOutput<S extends FFInputOutput<S>> implements CommandFragment {
 	private final String file;
 	private String format = null;
 	private final List<FFOption> options = new ArrayList<>();
@@ -51,7 +51,8 @@ abstract class FFInputOutput<S extends FFInputOutput> implements CommandFragment
 	protected abstract Optional<String> beforeFileName();
 	
 	public List<String> getCmdFragments() {
-		return CmdUtils.joinAnyCmdFragments(getFormat(), getOptions(), getSpecialOptions(), beforeFileName(), getFile());
+		List<String> formatFragment = format == null ? List.of() : List.of("-f", format);
+		return CmdUtils.joinAnyCmdFragments(formatFragment, getOptions(), getSpecialOptions(), beforeFileName(), getFile());
 	}
 
 	@Override

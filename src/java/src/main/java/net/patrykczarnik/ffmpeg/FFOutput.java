@@ -12,6 +12,10 @@ public class FFOutput extends FFInputOutput<FFOutput> {
 		super(file);
 	}
 	
+	public static FFOutput forFile(String file) {
+		return new FFOutput(file);
+	}
+
 	public FFOutput withMap(FFMap map) {
 		maps.add(map);
 		return self();
@@ -25,5 +29,5 @@ public class FFOutput extends FFInputOutput<FFOutput> {
 	protected Optional<String> beforeFileName() {
 		return Optional.empty();
 	}
-	
+
 }
