@@ -1,4 +1,4 @@
-package video_scripts;
+package net.patrykczarnik.ffmpeg;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -6,11 +6,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import net.patrykczarnik.ffmpeg.FFInput;
-import net.patrykczarnik.ffmpeg.FFOption;
-
 public class FFInputTest {
-
 	private static final String FILE1 = "file.mp4";
 	private static final String FORMAT1 = "image";
 

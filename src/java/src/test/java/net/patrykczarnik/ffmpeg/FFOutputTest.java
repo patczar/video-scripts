@@ -1,4 +1,4 @@
-package video_scripts;
+package net.patrykczarnik.ffmpeg;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,11 +6,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import net.patrykczarnik.ffmpeg.FFOption;
-import net.patrykczarnik.ffmpeg.FFOutput;
-
 public class FFOutputTest {
-
 	private static final String FILE1 = "file.mp4";
 	private static final String FORMAT1 = "image";
 
@@ -59,6 +55,29 @@ public class FFOutputTest {
 		assertThat(ffOutput.getOptions()).hasSize(2);
 		List<String> cmdFragments = ffOutput.getCmdFragments();
 		assertThat(cmdFragments).containsExactly("-option1", "-option2", "value2", FILE1);
+	}
+
+	@Test
+	public void testMap1() {
+		FFOutput ffOutput = FFOutput.forFile(FILE1)
+				.withMap(FFMap.ofString("map1"))
+				.withMap(FFMap.ofStream(1, "a"));
+		List<String> cmdFragments = ffOutput.getCmdFragments();
+		assertThat(cmdFragments).containsExactly("-map", "map1", "-map", "1:a", FILE1);
+	}
+
+	@Test
+	public void testMap2() {
+		FFOutput ffOutput = FFOutput.forFile(FILE1)
+				.withFormat(FORMAT1)
+				.withOption(FFOption.of("option1"))
+				.withOption(FFOption.of("option2", "value2"))
+				.withMap(FFMap.ofLabel("LAB"))
+				.withMap(FFMap.ofStream(0, "v"));
+		List<String> cmdFragments = ffOutput.getCmdFragments();
+		assertThat(cmdFragments).containsExactly("-f", FORMAT1,
+				"-option1", "-option2", "value2",
+				"-map", "[LAB]", "-map", "0:v", FILE1);
 	}
 
 }
