@@ -57,6 +57,6 @@ abstract class FFInputOutput<S extends FFInputOutput<S>> implements CommandFragm
 
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + " " + getCmdString();
+		return getClass().getSimpleName() + " " + getCmdText();
 	}
 }

@@ -42,7 +42,7 @@ public class CommandFragmentImpl implements CommandFragment {
 
     @Override
     public String toString() {
-        return this.getCmdString();
+        return this.getCmdText();
     }
 
 }

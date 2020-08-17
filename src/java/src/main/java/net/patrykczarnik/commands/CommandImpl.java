@@ -54,6 +54,6 @@ public class CommandImpl implements Command {
 
     @Override
     public String toString() {
-        return this.getCmdString();
+        return this.getCmdText();
     }
 }
