@@ -59,7 +59,7 @@ abstract class FFFilterOptionValue implements CommandText {
 		@Override
 		public String getAsText() {
 			// TODO escape special characters
-			return "\"" + text + "\"";
+			return "\'" + text + "\'";
 		}
 	}
 	

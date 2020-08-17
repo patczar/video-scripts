@@ -11,6 +11,18 @@ public class FFFilterOption implements CommandText {
 		this.value = value;
 	}
 	
+	public String getName() {
+		return name;
+	}
+	
+	public FFFilterOptionValue getValue() {
+		return value;
+	}
+
+	public Object getValueObject() {
+		return value.getAsObject();
+	}
+
 	@Override
 	public String getCmdText() {
 		if(name == null) {
