@@ -55,7 +55,7 @@ class FFInputOutput(ACommandFragment):
         result.append(self._file)
         return result
 
-    def addOption(self, name, value):
+    def add_option(self, name, value):
         self._options[name] = value
 
     @abstractmethod

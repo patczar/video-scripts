@@ -70,9 +70,9 @@ class VidProcessBuilder:
         file_spec = FFInput(file_step.path)
         if TRIM_STRATEGY == 'TRIM_STRATEGY_ARGS':
             if file_step.start:
-                file_spec.addOption('ss', file_step.start)
+                file_spec.add_option('ss', file_step.start)
             if file_step.end:
-                file_spec.addOption('t', file_step.end)
+                file_spec.add_option('t', file_step.end)
 
         self.inputs.append(file_spec)
         lbl = f'v{self.input_nr}'
@@ -95,7 +95,7 @@ class VidProcessBuilder:
                 self.output._file = value
             elif option in option_names_mappers['codec']:
                 option = option_names_mappers['codec'][option]
-                self.output.addOption(option, value)
+                self.output.add_option(option, value)
                 
 
     def accept_video_settings(self, option_spec:OptionSpec):
