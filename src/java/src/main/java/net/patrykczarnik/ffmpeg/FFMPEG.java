@@ -10,6 +10,7 @@ public class FFMPEG implements Command {
 	private List<FFInput> inputs = new ArrayList<>();
 	private List<FFOutput> outputs = new ArrayList<>();
 	private List<FFOption> globalOptions = new ArrayList<>();
+	private FFFilterGraph filterGraph = null;
 
 
     public String getCmd() {
@@ -17,7 +18,7 @@ public class FFMPEG implements Command {
     }
 
     public List<String> getOptions() {
-        return CmdUtils.joinAnyCmdFragments(globalOptions, inputs, outputs);
+        return CmdUtils.joinAnyCmdFragments(globalOptions, inputs, filterGraph, outputs);
     }
 
     @Override
