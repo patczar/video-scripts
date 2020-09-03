@@ -2,7 +2,7 @@ package net.patrykczarnik.vp;
 
 import java.io.File;
 
-import net.patrykczarnik.ffmpeg.FFMPEG;
+import net.patrykczarnik.commands.CommandScript;
 
 public class ProcessVideo {
 
@@ -12,12 +12,16 @@ public class ProcessVideo {
 			return;
 		}
 		File scriptFile = new File(args[0]);
-		System.out.println("Starting to parse script from " + scriptFile);
-		VPScript script = VPScript.fromFile(scriptFile);
-		System.out.println("Script parsed: " + script);
-		FFMPEG ffmpeg = VPRunner.ffmpegFromScript(script);
-		System.out.println("Converted to FFMPEG:");
-		System.out.println(ffmpeg);
+		try {
+			System.out.println("Starting to parse script from " + scriptFile);
+			VPScript script = VPScriptParser.parse(scriptFile);
+			System.out.println("Script parsed: " + script);
+			CommandScript scriptToRun = VPRunner.ffmpegFromScript(script);
+			System.out.println("Converted to script:");
+			System.out.println(scriptToRun);
+		} catch (VPParserException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

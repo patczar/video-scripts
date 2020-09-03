@@ -1,10 +1,10 @@
 package net.patrykczarnik.vp;
 
-import net.patrykczarnik.ffmpeg.FFMPEG;
+import net.patrykczarnik.commands.CommandScript;
 
 public class VPRunner {
 
-	public static FFMPEG ffmpegFromScript(VPScript script) {
+	public static CommandScript ffmpegFromScript(VPScript script) {
 		// TODO Auto-generated method stub
 		return null;
 	}
