@@ -30,7 +30,8 @@ public class VPScript {
 	
 	@Override
 	public String toString() {
-		return "VPScript, " + entries.size() + " entries";
+		// return "VPScript, " + entries.size() + " entries";
+		return "VPScript, " + entries;
 	}
 
 }
