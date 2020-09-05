@@ -59,7 +59,7 @@ public class VPScriptParser {
 			return parseFileEntry();
 		}
 		if(command.startsWith("set-")) {
-			return parseOptionsEntry();
+			return parseOptionsEntry(command);
 		}
 		throw new VPParserException("Not recognized command: " + command);
 	}
@@ -205,9 +205,9 @@ public class VPScriptParser {
 		return entry;
 	}
 
-	private VPScriptEntrySetOptions parseOptionsEntry() {
-		// TODO Auto-generated method stub
-		return new VPScriptEntrySetOptions();
+	private VPScriptEntrySetOptions parseOptionsEntry(String command) throws VPParserException {
+		List<VPScriptOption> options = readOptions();
+		return VPScriptEntrySetOptions.of(command, options);
 	}
 }
 
