@@ -1,5 +1,10 @@
 package net.patrykczarnik.vp;
 
-abstract class VPScriptEntry {
-	
+import net.patrykczarnik.commands.CommandText;
+
+abstract class VPScriptEntry implements CommandText {
+	@Override
+	public String toString() {
+		return getCmdText();
+	}
 }

@@ -16,9 +16,14 @@ public class ProcessVideo {
 			System.out.println("Starting to parse script from " + scriptFile);
 			VPScript script = VPScriptParser.parse(scriptFile);
 			System.out.println("Script parsed: " + script);
+			System.out.println();
+			System.out.println(script.getCmdText());
+			System.out.println();
+
 			CommandScript scriptToRun = VPRunner.ffmpegFromScript(script);
 			System.out.println("Converted to script:");
 			System.out.println(scriptToRun);
+			
 		} catch (VPParserException e) {
 			e.printStackTrace();
 		}

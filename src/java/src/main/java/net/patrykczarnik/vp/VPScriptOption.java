@@ -1,6 +1,8 @@
 package net.patrykczarnik.vp;
 
-public class VPScriptOption {
+import net.patrykczarnik.commands.CommandText;
+
+public class VPScriptOption implements CommandText {
 	private final String name;
 	private VPScriptValue value;
 	
@@ -56,6 +58,11 @@ public class VPScriptOption {
 
 	@Override
 	public String toString() {
+		return getCmdText();
+	}
+
+	@Override
+	public String getCmdText() {
 		String sValue = value == null ? "" : value.toString();
 		return "-" + name + " " + sValue;
 	}

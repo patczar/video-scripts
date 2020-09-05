@@ -5,7 +5,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class VPScriptValue {
+import net.patrykczarnik.commands.CommandText;
+
+public abstract class VPScriptValue implements CommandText {
 	public abstract String textValue();
 
 	public abstract double numValue();
@@ -19,8 +21,13 @@ public abstract class VPScriptValue {
 	public abstract List<? extends VPScriptValue> asMany();
 	
 	@Override
-	public String toString() {
+	public String getCmdText() {
 		return this.textValue();
+	}
+	
+	@Override
+	public String toString() {
+		return getCmdText();
 	}
 
 	public static Many many() {
@@ -146,6 +153,19 @@ public abstract class VPScriptValue {
 		@Override
 		public boolean isNum() {
 			return false;
+		}
+		
+		@Override
+		public String getCmdText() {
+			if(wasCited) {
+				if(value.contains("\"")) {
+					return "'" + this.textValue() + "'";
+				} else {
+					return "\"" + this.textValue() + "\"";
+				}
+			} else {
+				return this.textValue();
+			}
 		}
 	}
 	

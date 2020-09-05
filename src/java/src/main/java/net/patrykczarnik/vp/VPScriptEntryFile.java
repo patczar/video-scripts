@@ -40,10 +40,18 @@ class VPScriptEntryFile extends VPScriptEntry {
 	}
 
 	@Override
-	public String toString() {
-		return "file " + path + " -s " + start + " -e " + end;
+	public String getCmdText() {
+		StringBuilder result = new StringBuilder(120);
+		result.append("file ");
+		result.append(path);
+		if(start != null) {
+			result.append(" -s ").append(start);
+		}
+		if(end != null) {
+			result.append(" -e ").append(end);
+		}
+		return result.toString();
 	}
-
-	
 	
 }
+
