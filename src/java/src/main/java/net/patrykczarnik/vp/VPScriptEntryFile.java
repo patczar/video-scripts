@@ -19,6 +19,16 @@ class VPScriptEntryFile extends VPScriptEntry {
 		return new VPScriptEntryFile(path, null, null);
 	}
 
+	@Override
+	protected boolean isSetOptions() {
+		return false;
+	}
+	
+	@Override
+	protected VPScriptEntrySetOptions asSetOptions() {
+		throw new UnsupportedOperationException("This is not SetOptions entry");
+	}
+	
 	public String getPath() {
 		return path;
 	}
@@ -52,6 +62,6 @@ class VPScriptEntryFile extends VPScriptEntry {
 		}
 		return result.toString();
 	}
-	
+
 }
 

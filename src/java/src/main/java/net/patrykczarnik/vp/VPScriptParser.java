@@ -175,12 +175,12 @@ public class VPScriptParser {
 			String txt = readText();
 			try {
 				int ival = Integer.parseInt(txt);
-				return VPScriptValue.int_(ival);				
+				return VPScriptValue.int_(ival);
 			} catch(NumberFormatException e) {
 			}
 			try {
 				double dval = Double.parseDouble(txt);
-				return VPScriptValue.num_(dval);				
+				return VPScriptValue.num_(dval);
 			} catch(NumberFormatException e) {
 			}
 			return VPScriptValue.text(txt, false);

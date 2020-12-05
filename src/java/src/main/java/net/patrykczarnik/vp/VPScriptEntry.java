@@ -7,4 +7,8 @@ abstract class VPScriptEntry implements CommandText {
 	public String toString() {
 		return getCmdText();
 	}
+
+	protected abstract boolean isSetOptions();
+
+	protected abstract VPScriptEntrySetOptions asSetOptions();
 }

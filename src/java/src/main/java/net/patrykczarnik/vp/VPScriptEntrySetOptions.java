@@ -22,6 +22,16 @@ class VPScriptEntrySetOptions extends VPScriptEntry {
 		return new VPScriptEntrySetOptions(command, new ArrayList<>());
 	}
 
+	@Override
+	protected boolean isSetOptions() {
+		return true;
+	}
+	
+	@Override
+	protected VPScriptEntrySetOptions asSetOptions() {
+		return this;
+	}
+	
 	public String getCommand() {
 		return command;
 	}
