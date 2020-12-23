@@ -1,4 +1,4 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.in;
 
 class VPScriptEntryFile extends VPScriptEntry {
 	private final String path;
@@ -20,12 +20,12 @@ class VPScriptEntryFile extends VPScriptEntry {
 	}
 
 	@Override
-	protected boolean isSetOptions() {
+	public boolean isSetOptions() {
 		return false;
 	}
 	
 	@Override
-	protected VPScriptEntrySetOptions asSetOptions() {
+	public VPScriptEntrySetOptions asSetOptions() {
 		throw new UnsupportedOperationException("This is not SetOptions entry");
 	}
 	

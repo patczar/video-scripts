@@ -1,4 +1,4 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.in;
 
 public class VPParserException extends Exception {
 	private static final long serialVersionUID = 1L;

@@ -1,8 +1,9 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.in;
 
 import java.io.File;
 
 import net.patrykczarnik.commands.CommandScript;
+import net.patrykczarnik.vp.out.VPRunner;
 
 public class ProcessVideo {
 

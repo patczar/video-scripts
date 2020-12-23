@@ -1,9 +1,12 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.out;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
+import net.patrykczarnik.vp.in.VPScriptOption;
 
 public class CurrentOptions {
 	private Map<String, Map<String, VPScriptOption>> options = new TreeMap<>();

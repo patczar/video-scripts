@@ -1,11 +1,11 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.in;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-class VPScriptEntrySetOptions extends VPScriptEntry {
+public class VPScriptEntrySetOptions extends VPScriptEntry {
 	private String command;
 	private List<VPScriptOption> options;
 	
@@ -23,12 +23,12 @@ class VPScriptEntrySetOptions extends VPScriptEntry {
 	}
 
 	@Override
-	protected boolean isSetOptions() {
+	public boolean isSetOptions() {
 		return true;
 	}
 	
 	@Override
-	protected VPScriptEntrySetOptions asSetOptions() {
+	public VPScriptEntrySetOptions asSetOptions() {
 		return this;
 	}
 	

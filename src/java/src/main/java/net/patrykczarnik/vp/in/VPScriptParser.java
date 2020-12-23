@@ -1,4 +1,4 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.in;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import net.patrykczarnik.vp.VPScriptValue.Single;
 
 public class VPScriptParser {
 	private String line;

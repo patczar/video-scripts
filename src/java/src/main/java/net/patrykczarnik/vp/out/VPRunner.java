@@ -1,7 +1,9 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.out;
 
 import net.patrykczarnik.commands.CommandScript;
 import net.patrykczarnik.commands.CommandScriptImpl;
+import net.patrykczarnik.vp.in.VPScript;
+import net.patrykczarnik.vp.in.VPScriptEntry;
 
 public class VPRunner {
 	private VPScript vpScript;

@@ -1,4 +1,4 @@
-package net.patrykczarnik.vp;
+package net.patrykczarnik.vp.in;
 
 import java.util.ArrayList;
 import java.util.Collection;
