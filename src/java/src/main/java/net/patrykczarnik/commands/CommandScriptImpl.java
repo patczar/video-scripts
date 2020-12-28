@@ -25,6 +25,10 @@ public class CommandScriptImpl implements CommandScript {
 		return new CommandScriptImpl(commands);
 	}
 
+	public static CommandScriptImpl of(Command... commands) {
+		return new CommandScriptImpl(List.of(commands));
+	}
+
 	public List<Command> getCommands() {
 		return Collections.unmodifiableList(commands);
 	}

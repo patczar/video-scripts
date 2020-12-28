@@ -1,6 +1,6 @@
 package net.patrykczarnik.vp.in;
 
-class VPScriptEntryFile extends VPScriptEntry {
+public class VPScriptEntryFile extends VPScriptEntry {
 	private final String path;
 	private Double start;
 	private Double end;

@@ -1,9 +1,14 @@
-package net.patrykczarnik.vp.in;
+package net.patrykczarnik.vp;
 
 import java.io.File;
 
+import net.patrykczarnik.commands.Command;
 import net.patrykczarnik.commands.CommandScript;
+import net.patrykczarnik.vp.in.VPParserException;
+import net.patrykczarnik.vp.in.VPScript;
+import net.patrykczarnik.vp.in.VPScriptParser;
 import net.patrykczarnik.vp.out.VPRunner;
+import net.patrykczarnik.vp.out.VPTranslatorException;
 
 public class ProcessVideo {
 
@@ -24,8 +29,14 @@ public class ProcessVideo {
 			CommandScript scriptToRun = VPRunner.ffmpegFromScript(script);
 			System.out.println("Converted to script:");
 			System.out.println(scriptToRun);
+			System.out.println();
+			for(Command command : scriptToRun.getCommands()) {
+				System.out.println(command.getCmdText());
+			}
 			
 		} catch (VPParserException e) {
+			e.printStackTrace();
+		} catch(VPTranslatorException e) {
 			e.printStackTrace();
 		}
 	}
