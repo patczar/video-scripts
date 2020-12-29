@@ -24,35 +24,43 @@ import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
  * 
  */
 public class TranslatorImpl1 extends TranslatorAbstractImpl {
-	private List<FFInput> inputs;
-	private List<FFFilterChain> chunkChains;
-	private int nextInput = 0;
+	private List<Segment> segments;
+	private Segment currentSegment;
+	// private List<FFFilterChain> chunkChains;
 	private CommandScript resultScript = null;
 
 	@Override
 	public void begin() {
-		inputs = new ArrayList<>();
-		chunkChains = new ArrayList<>();
+		segments = new ArrayList<>();
+		currentSegment = new Segment();
 	}
 
 	@Override
 	public void end() {
-		FFMPEG ffmpeg = new FFMPEG();
-		ffmpeg.addInputs(inputs);
+		finishSegment();
+		int nseg = 0;
+		int ninp = 0;
 		
-		FFFilterGraph filterGraph = FFFilterGraph.ofChains(chunkChains);
+		FFMPEG ffmpeg = new FFMPEG();
+		ffmpeg.setFilterGraph(FFFilterGraph.empty());
+		for(Segment segment : segments) {
+			ffmpeg.addInputs(segment.getInputs());
+			ffmpeg.getFilterGraph().addChains(segment.getCombinedChains(nseg, ninp));
+			nseg += 1;
+			ninp += segment.getInputs().size();
+		}
+		
+		List<String> startLabels = IntStream.range(0, nseg)
+				.mapToObj(Segment::segmentLabel)
+				.collect(Collectors.toList());
+		
 		FFFilter concatFilter = FFFilter.newFilter("concat",
-				FFFilterOption.integer("n", chunkChains.size()),
+				FFFilterOption.integer("n", segments.size()),
 				FFFilterOption.integer("v", 1),
 				FFFilterOption.integer("a", 0));
 		
-		List<String> startLabels = IntStream.range(0, nextInput)
-				.mapToObj(TranslatorImpl1::chunkLabel)
-				.collect(Collectors.toList());
-		
-		FFFilterChain concatChain = FFFilterChain.withLabels(startLabels, List.of("v"), List.of(concatFilter));
-		filterGraph.addChain(concatChain);
-		ffmpeg.setFilterGraph(filterGraph);
+		FFFilterChain concatSegmentsChain = FFFilterChain.withLabels(startLabels, List.of("v"), List.of(concatFilter));
+		ffmpeg.getFilterGraph().addChain(concatSegmentsChain);
 		
 		resultScript = CommandScriptImpl.of(ffmpeg);
 	}
@@ -72,13 +80,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		if(entry.getEnd() != null) {
 			newInput.withOption(FFOption.of("to", String.valueOf(entry.getEnd())));
 		}
-		inputs.add(newInput);
-		
-		String startLabel = nextInput + ":0";
-		String endLabel = chunkLabel(nextInput);
-		FFFilterChain newChain = FFFilterChain.withLabels(startLabel, endLabel);
-		chunkChains.add(newChain);
-		nextInput++;
+		currentSegment.addInput(newInput);		
 	}
 
 	@Override
@@ -86,8 +88,8 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		return resultScript;
 	}
 
-	private static String chunkLabel(int n) {
-		return "v" + n;
+	private void finishSegment() {
+		segments.add(currentSegment);
+		currentSegment = new Segment();
 	}
-
 }
