@@ -1,8 +1,9 @@
 package net.patrykczarnik.vp.in;
 
 import net.patrykczarnik.commands.CommandText;
+import net.patrykczarnik.ffmpeg.FFOption;
 
-public class VPScriptOption implements CommandText {
+public class VPScriptOption implements CommandText, Cloneable {
 	private final String name;
 	private VPScriptValue value;
 	
@@ -65,5 +66,14 @@ public class VPScriptOption implements CommandText {
 	public String getCmdText() {
 		String sValue = value == null ? "" : value.toString();
 		return "-" + name + " " + sValue;
+	}
+	
+	@Override
+	public VPScriptOption clone() {
+		return new VPScriptOption(this.name, this.value);
+	}
+
+	public FFOption toFFOption() {
+		return FFOption.of(getName(), textValue()); // FIXME
 	}
 }
