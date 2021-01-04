@@ -10,10 +10,18 @@ import net.patrykczarnik.ffmpeg.FFFilter;
 import net.patrykczarnik.ffmpeg.FFFilterChain;
 import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.ffmpeg.FFInput;
+import net.patrykczarnik.utils.Positioned;
+import net.patrykczarnik.vp.in.VPScriptOption;
 
 public class Segment {
 	private List<FFInput> inputs = new ArrayList<>();
+	private CurrentOptions remeberedOptions;
+	private FiltersRegistry filtersRegistry;
 	
+	public Segment(FiltersRegistry filtersRegistry) {
+		this.filtersRegistry = filtersRegistry;
+	}
+
 	public void addInput(FFInput input) {
 		inputs.add(input);
 	}
@@ -35,12 +43,27 @@ public class Segment {
 		String endLabel = segmentLabel(nseg);
 		
 		FFFilterChain chain = FFFilterChain.withLabels(startLabels, List.of(endLabel), List.of(concatFilter));
+		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
+		for(VPScriptOption vpOption : remeberedOptions.getVideo().values()) {
+			AFilterMapper filterMapper = filtersRegistry.get("video", vpOption.getName());
+			allFilters.addAll(filterMapper.getFFFilters(vpOption));			
+		}
+		allFilters.sort(null);
+		chain.addFilters(allFilters.stream().map(Positioned::getValue).collect(Collectors.toList()));
 		
 		return List.of(chain);
 	}
 	
 	public static String segmentLabel(int nseg) {
 		return "seg" + nseg;
+	}
+
+	public void remeberOptions(CurrentOptions currentOptions) {
+		remeberedOptions = currentOptions.clone();
+	}
+	
+	public CurrentOptions getRemeberedOptions() {
+		return remeberedOptions;
 	}
 
 }

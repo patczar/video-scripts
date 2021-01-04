@@ -1,0 +1,14 @@
+{
+	"video": {
+		"crop": {
+			"ff-name": "crop",
+			"position": 280,
+			"params": ["w", "h", "x", "y"]
+		},
+		"scale": {
+			"ff-name": "scale",
+			"position": 300,
+			"params": ["w", "h"]
+		}
+	}
+}

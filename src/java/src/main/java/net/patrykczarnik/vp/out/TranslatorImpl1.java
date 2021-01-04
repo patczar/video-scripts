@@ -2,6 +2,7 @@ package net.patrykczarnik.vp.out;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -14,8 +15,10 @@ import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.ffmpeg.FFInput;
 import net.patrykczarnik.ffmpeg.FFMPEG;
 import net.patrykczarnik.ffmpeg.FFOption;
+import net.patrykczarnik.ffmpeg.FFOutput;
 import net.patrykczarnik.vp.in.VPScriptEntryFile;
 import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
+import net.patrykczarnik.vp.in.VPScriptOption;
 
 /**
  * @author Patryk Czarnik
@@ -24,20 +27,25 @@ import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
  * 
  */
 public class TranslatorImpl1 extends TranslatorAbstractImpl {
+	private FiltersRegistry filtersRegistry;
 	private List<Segment> segments;
 	private Segment currentSegment;
-	// private List<FFFilterChain> chunkChains;
+	private CurrentOptions currentOptions;
 	private CommandScript resultScript = null;
+	
+	public TranslatorImpl1(FiltersRegistry filtersRegistry) {
+		this.filtersRegistry = filtersRegistry;
+	}
 
 	@Override
 	public void begin() {
 		segments = new ArrayList<>();
-		currentSegment = new Segment();
+		currentOptions = new CurrentOptions();
 	}
 
 	@Override
 	public void end() {
-		finishSegment();
+		endSegment();
 		int nseg = 0;
 		int ninp = 0;
 		
@@ -62,17 +70,25 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		FFFilterChain concatSegmentsChain = FFFilterChain.withLabels(startLabels, List.of("v"), List.of(concatFilter));
 		ffmpeg.getFilterGraph().addChain(concatSegmentsChain);
 		
+		applyOutputOptions(ffmpeg);
+		
 		resultScript = CommandScriptImpl.of(ffmpeg);
 	}
 
 	@Override
 	public void acceptSetOptions(VPScriptEntrySetOptions entry) {
-		// TODO Auto-generated method stub
-
+		if(currentSegment != null) {
+			endSegment();
+		}
+		currentOptions.update(entry);
 	}
 
 	@Override
 	public void acceptFile(VPScriptEntryFile entry) {
+		if(currentSegment == null) {
+			beginSegment();
+		}
+		
 		FFInput newInput = FFInput.forFile(entry.getPath());
 		if(entry.getStart() != null) {
 			newInput.withOption(FFOption.of("ss", String.valueOf(entry.getStart())));
@@ -88,8 +104,29 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		return resultScript;
 	}
 
-	private void finishSegment() {
-		segments.add(currentSegment);
-		currentSegment = new Segment();
+	private void beginSegment() {
+		currentSegment = new Segment(filtersRegistry);
+		currentSegment.remeberOptions(currentOptions);
 	}
+
+	private void endSegment() {
+		segments.add(currentSegment);
+		currentSegment = null;
+	}
+
+	private void applyOutputOptions(FFMPEG ffmpeg) {
+		Map<String, VPScriptOption> outputOptions = currentOptions.getOutput();
+		String outputFile;
+		if(outputOptions.containsKey("out")) {
+			outputFile = outputOptions.get("out").textValue();
+		} else {
+			outputFile = "out.mp4";
+		}
+		FFOutput ffOutput = FFOutput.forFile(outputFile);
+		outputOptions.forEach((key, option) -> {			
+			ffOutput.withOption(option.toFFOption());
+		});
+		ffmpeg.addOutputs(ffOutput);
+	}
+
 }
