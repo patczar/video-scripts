@@ -8,6 +8,15 @@ import java.util.stream.Collectors;
 import net.patrykczarnik.commands.CommandText;
 
 public abstract class VPScriptValue implements CommandText {
+	public static enum ValueType {
+		TEXT,
+		MANY,
+		INT,
+		NUM,
+	}
+	
+	public abstract ValueType getType();
+
 	public abstract String textValue();
 
 	public abstract double numValue();
@@ -70,6 +79,11 @@ public abstract class VPScriptValue implements CommandText {
 			this.values = new ArrayList<>(values);
 		}
 		
+		@Override
+		public ValueType getType() {
+			return ValueType.MANY;
+		}
+		
 		public Many add(VPScriptValue.Single value) {
 			this.values.add(value);
 			return this;
@@ -129,6 +143,11 @@ public abstract class VPScriptValue implements CommandText {
 			this.wasCited = wasCited;
 		}
 
+		@Override
+		public ValueType getType() {
+			return ValueType.TEXT;
+		}
+		
 		public boolean wasCited() {
 			return wasCited;
 		}
@@ -177,6 +196,11 @@ public abstract class VPScriptValue implements CommandText {
 		}
 
 		@Override
+		public ValueType getType() {
+			return ValueType.INT;
+		}
+		
+		@Override
 		public String textValue() {
 			return String.valueOf(value);
 		}
@@ -204,6 +228,11 @@ public abstract class VPScriptValue implements CommandText {
 			this.value = value;
 		}
 
+		@Override
+		public ValueType getType() {
+			return ValueType.NUM;
+		}
+		
 		@Override
 		public String textValue() {
 			return String.valueOf(value);

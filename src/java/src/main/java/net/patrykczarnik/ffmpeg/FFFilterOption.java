@@ -64,5 +64,4 @@ public class FFFilterOption implements CommandText {
 		return new FFFilterOption(name, FFFilterOptionValue.number(value));
 	}
 	
-	
 }

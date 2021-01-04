@@ -1,8 +1,19 @@
 package net.patrykczarnik.ffmpeg;
 
+import java.util.Objects;
+
 import net.patrykczarnik.commands.CommandText;
 
 abstract class FFFilterOptionValue implements CommandText {
+	public static enum ValueType {
+		TEXT,
+		CITED,
+		INT,
+		FLOAT,
+	}
+	
+	public abstract ValueType getType();
+	
 	public abstract String getAsText();
 
 	public abstract Object getAsObject();
@@ -15,6 +26,23 @@ abstract class FFFilterOptionValue implements CommandText {
 	@Override
 	public String toString() {
 		return getAsText();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(obj == this) {
+			return true;
+		}
+		if(!(obj instanceof ValueType)) {
+			return false;
+		}
+		FFFilterOptionValue other = (FFFilterOptionValue)obj;
+		return this.getType() == other.getType() && Objects.equals(this.getAsObject(), other.getAsObject());
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.getType(), this.getAsObject());
 	}
 	
 	public static TextValue text(String text) {
@@ -39,6 +67,11 @@ abstract class FFFilterOptionValue implements CommandText {
 		TextValue(String text) {
 			this.text = text;
 		}
+		
+		@Override
+		public ValueType getType() {
+			return ValueType.TEXT;
+		}
 
 		@Override
 		public String getAsText() {
@@ -57,6 +90,11 @@ abstract class FFFilterOptionValue implements CommandText {
 		}
 		
 		@Override
+		public ValueType getType() {
+			return ValueType.CITED;
+		}
+
+		@Override
 		public String getAsText() {
 			// TODO escape special characters
 			return "\'" + text + "\'";
@@ -70,6 +108,11 @@ abstract class FFFilterOptionValue implements CommandText {
 			this.value = value;
 		}
 		
+		@Override
+		public ValueType getType() {
+			return ValueType.INT;
+		}
+
 		@Override
 		public String getAsText() {
 			return String.valueOf(value);
@@ -88,6 +131,11 @@ abstract class FFFilterOptionValue implements CommandText {
 			this.value = value;
 		}
 		
+		@Override
+		public ValueType getType() {
+			return ValueType.FLOAT;
+		}
+
 		@Override
 		public String getAsText() {
 			return String.valueOf(value);
