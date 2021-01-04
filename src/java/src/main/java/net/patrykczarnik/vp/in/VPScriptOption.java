@@ -1,6 +1,8 @@
 package net.patrykczarnik.vp.in;
 
 import net.patrykczarnik.commands.CommandText;
+import net.patrykczarnik.ffmpeg.FFFilter;
+import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.ffmpeg.FFOption;
 
 public class VPScriptOption implements CommandText, Cloneable {
@@ -74,6 +76,15 @@ public class VPScriptOption implements CommandText, Cloneable {
 	}
 
 	public FFOption toFFOption() {
-		return FFOption.of(getName(), textValue()); // FIXME
+		return FFOption.of(getName(), textValue());
 	}
+
+	public FFFilterOption toFFFilterOption() {
+		return getValue().toFFFilterOption(getName());
+	}
+	
+	public FFFilter toFFFilter() {
+		return FFFilter.newFilter(getName(), getValue().toFFFilterOptions());
+	}
+	
 }

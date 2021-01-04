@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import net.patrykczarnik.commands.CommandText;
+import net.patrykczarnik.ffmpeg.FFFilterOption;
 
 public abstract class VPScriptValue implements CommandText {
 	public static enum ValueType {
@@ -28,6 +29,19 @@ public abstract class VPScriptValue implements CommandText {
 	public abstract boolean isMany();
 	
 	public abstract List<? extends VPScriptValue> asMany();
+	
+	public abstract FFFilterOption toFFFilterOption(String optionName);
+
+	public FFFilterOption toFFFilterOption() {
+		return toFFFilterOption(null);
+	}
+
+	public List<FFFilterOption> toFFFilterOptions() {
+		return this.asMany().stream()
+			.map(VPScriptValue::toFFFilterOption)
+			.collect(Collectors.toList());
+	}
+
 	
 	@Override
 	public String getCmdText() {
@@ -120,6 +134,11 @@ public abstract class VPScriptValue implements CommandText {
 		public boolean isMany() {
 			return true;
 		}
+
+		@Override
+		public FFFilterOption toFFFilterOption(String optionName) {
+			throw new IllegalStateException("VPValue of type MANY cannot be converted into a single FFFilterOption");
+		}
 	}
 	
 	public static abstract class Single extends VPScriptValue {
@@ -186,6 +205,15 @@ public abstract class VPScriptValue implements CommandText {
 				return this.textValue();
 			}
 		}
+
+		@Override
+		public FFFilterOption toFFFilterOption(String optionName) {
+			if(wasCited()) {
+				return FFFilterOption.citedText(optionName, value);
+			} else {
+				return FFFilterOption.text(optionName, value);
+			}
+		}
 	}
 	
 	public static class Int extends Single {
@@ -219,6 +247,11 @@ public abstract class VPScriptValue implements CommandText {
 		public boolean isNum() {
 			return true;
 		}
+
+		@Override
+		public FFFilterOption toFFFilterOption(String optionName) {
+			return FFFilterOption.integer(optionName, value);
+		}
 	}
 
 	public static class Num extends Single {
@@ -251,6 +284,11 @@ public abstract class VPScriptValue implements CommandText {
 		@Override
 		public boolean isNum() {
 			return true;
+		}
+
+		@Override
+		public FFFilterOption toFFFilterOption(String optionName) {
+			return FFFilterOption.number(optionName, value);
 		}
 	}
 }
