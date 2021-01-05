@@ -8,6 +8,10 @@ import net.patrykczarnik.vp.in.VPScriptOption;
 
 public interface AFilterMapper {
 	List<Positioned<FFFilter>> getFFFilters(VPScriptOption vpOption);
+
+	default List<Positioned<FFFilter>> getPostponed() {
+		return List.of();
+	}
 	
 	// TODO SOX filters? Other options?
 	

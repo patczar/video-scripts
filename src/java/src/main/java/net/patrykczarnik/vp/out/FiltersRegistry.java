@@ -18,26 +18,18 @@ import net.patrykczarnik.utils.CollectionUtils;
 
 public class FiltersRegistry {
 	private static final String DEFAULT_JSON = "/net/patrykczarnik/vp/filters.json";
+	static final String DEFAULT_IMPL = "simple";
+
 	private Map<String, AFilterMapper> videoMappers = new LinkedHashMap<>();
 	private Map<String, AFilterMapper> audioMappers = new LinkedHashMap<>();
+	private Map<String, FilterMapperMergingImpl> mergingMappers = new LinkedHashMap<>();
 	
 	public static FiltersRegistry loadFromInternalJson() {
 		FiltersRegistry reg = new FiltersRegistry();
-		try(JsonParser jsonParser = Json.createParser(FiltersRegistry.class.getResourceAsStream(DEFAULT_JSON))) {
-			while(jsonParser.next() != Event.START_OBJECT);
-			
-			JsonObject jsonObject = jsonParser.getObject();
-			if(jsonObject.containsKey("video")) {
-				defineMappers(jsonObject.getJsonObject("video"), reg.videoMappers);
-			}
-			if(jsonObject.containsKey("audio")) {
-				defineMappers(jsonObject.getJsonObject("audio"), reg.audioMappers);
-			}
-		}
-		
+		reg.loadJson();
 		return reg;
 	}
-	
+
 	public AFilterMapper get(String category, String name) {
 		switch(category) {
 			case "video": return videoMappers.computeIfAbsent(name, FiltersRegistry::notFound);
@@ -46,9 +38,21 @@ public class FiltersRegistry {
 		}
 	}
 
-	static final String DEFAULT_IMPL = "simple";
+	private void loadJson() {
+		try(JsonParser jsonParser = Json.createParser(FiltersRegistry.class.getResourceAsStream(DEFAULT_JSON))) {
+			while(jsonParser.next() != Event.START_OBJECT);
+			
+			JsonObject jsonObject = jsonParser.getObject();
+			if(jsonObject.containsKey("video")) {
+				defineMappers(jsonObject.getJsonObject("video"), this.videoMappers);
+			}
+			if(jsonObject.containsKey("audio")) {
+				defineMappers(jsonObject.getJsonObject("audio"), this.audioMappers);
+			}
+		}
+	}
 	
-	private static void defineMappers(JsonObject jsonObject, Map<String, AFilterMapper> map) {
+	private void defineMappers(JsonObject jsonObject, Map<String, AFilterMapper> map) {
 		jsonObject.forEach((vpName, jsonValue) -> {
 			JsonObject spec = jsonValue.asJsonObject();
 			AFilterMapper mapper = forJsonSpec(vpName, spec);
@@ -56,15 +60,16 @@ public class FiltersRegistry {
 		});
 	}
 	
-	public static AFilterMapper forJsonSpec(String vpName, JsonObject spec) {
+	private AFilterMapper forJsonSpec(String vpName, JsonObject spec) {
 		String impl = spec.getString("impl", DEFAULT_IMPL);
 		switch(impl) {
 			case "simple": return newSimple(vpName, spec);
+			case "merging": return getMerging(vpName, spec);
 			default: throw new IllegalArgumentException("Unknown filter mapper impl: " + impl);
 		}
 	}
 
-	private static FilterMapperSimpleImpl newSimple(String vpName, JsonObject spec) {
+	private FilterMapperSimpleImpl newSimple(String vpName, JsonObject spec) {
 		String ffName = spec.getString("ff-name", vpName);
 		int position = spec.getInt("position", AFilterMapper.POSITION_DEFAULT);
 		List<JsonString> paramsSpec = spec.getJsonArray("params").getValuesAs(JsonString.class);
@@ -79,6 +84,19 @@ public class FiltersRegistry {
 		return mapper;
 	}
 
+	private FilterMapperMergingImpl getMerging(String vpName, JsonObject spec) {
+		String ffName = spec.getString("ff-name", vpName);
+		String ffParam= spec.getString("ff-param", vpName);
+		int position = spec.getInt("position", AFilterMapper.POSITION_DEFAULT);
+		
+		FilterMapperMergingImpl mapper = mergingMappers.get(ffName);
+		if(mapper == null) {
+			mapper = new FilterMapperMergingImpl(ffName, position);
+		}
+		mapper.addParamMapping(vpName, ffParam);
+		return mapper;
+	}
+	
 	private static FFFilterOption jsonValueToFFFilterOption(String name, JsonValue value) {
 		switch(value.getValueType()) {
 			case NULL:

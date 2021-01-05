@@ -2,7 +2,9 @@ package net.patrykczarnik.vp.out;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -44,9 +46,14 @@ public class Segment {
 		
 		FFFilterChain chain = FFFilterChain.withLabels(startLabels, List.of(endLabel), List.of(concatFilter));
 		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
+		Set<AFilterMapper> mappers = new LinkedHashSet<>();
 		for(VPScriptOption vpOption : remeberedOptions.getVideo().values()) {
 			AFilterMapper filterMapper = filtersRegistry.get("video", vpOption.getName());
-			allFilters.addAll(filterMapper.getFFFilters(vpOption));			
+			allFilters.addAll(filterMapper.getFFFilters(vpOption));
+			mappers.add(filterMapper);
+		}
+		for(AFilterMapper filterMapper : mappers) {
+			allFilters.addAll(filterMapper.getPostponed());
 		}
 		allFilters.sort(null);
 		chain.addFilters(allFilters.stream().map(Positioned::getValue).collect(Collectors.toList()));

@@ -10,8 +10,13 @@
 			"impl": "simple",
 			"ff-name": "scale",
 			"position": 300,
-			"params": ["w", "h"],
-			"default-params": {"bara": "akara", "zbira": 333}
+			"params": ["w", "h"]
+		},
+		"gamma": {
+			"impl": "merging",
+			"ff-name": "eq",
+			"ff-param": "gamma"
+			
 		}
 	}
 }
