@@ -12,6 +12,7 @@ import net.patrykczarnik.ffmpeg.FFFilter;
 import net.patrykczarnik.ffmpeg.FFFilterChain;
 import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.ffmpeg.FFInput;
+import net.patrykczarnik.utils.CollectionUtils;
 import net.patrykczarnik.utils.Positioned;
 import net.patrykczarnik.vp.in.VPScriptOption;
 
@@ -56,7 +57,7 @@ public class Segment {
 			allFilters.addAll(filterMapper.getPostponed());
 		}
 		allFilters.sort(null);
-		chain.addFilters(allFilters.stream().map(Positioned::getValue).collect(Collectors.toList()));
+		chain.addFilters(CollectionUtils.mapList(allFilters, Positioned::getValue));
 		
 		return List.of(chain);
 	}
