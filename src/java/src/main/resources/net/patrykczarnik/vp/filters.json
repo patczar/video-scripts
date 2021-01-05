@@ -1,14 +1,17 @@
 {
 	"video": {
 		"crop": {
+			"impl": "simple",
 			"ff-name": "crop",
 			"position": 280,
 			"params": ["w", "h", "x", "y"]
 		},
 		"scale": {
+			"impl": "simple",
 			"ff-name": "scale",
 			"position": 300,
-			"params": ["w", "h"]
+			"params": ["w", "h"],
+			"default-params": {"bara": "akara", "zbira": 333}
 		}
 	}
 }
