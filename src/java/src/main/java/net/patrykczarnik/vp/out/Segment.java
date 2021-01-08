@@ -52,9 +52,11 @@ public class Segment {
 		}
 		Set<AFilterMapper> mappers = new LinkedHashSet<>();
 		for(VPScriptOption vpOption : remeberedOptions.getVideo().values()) {
-			AFilterMapper filterMapper = filtersRegistry.get("video", vpOption.getName());
-			filterMapper.acceptOption(vpOption);
-			mappers.add(filterMapper);
+			Set<AFilterMapper> foundMappers = filtersRegistry.get("video", vpOption.getName());
+			for(AFilterMapper mapper : foundMappers) {
+				mapper.acceptOption(vpOption);
+				mappers.add(mapper);				
+			}
 		}
 		for(AFilterMapper filterMapper : mappers) {
 			allFilters.addAll(filterMapper.getCollectedFFFilters());

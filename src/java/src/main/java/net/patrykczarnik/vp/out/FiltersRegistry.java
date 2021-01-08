@@ -1,5 +1,6 @@
 package net.patrykczarnik.vp.out;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,9 +22,11 @@ import net.patrykczarnik.utils.CollectionUtils;
 public class FiltersRegistry {
 	private static final String DEFAULT_JSON = "/net/patrykczarnik/vp/filters.json";
 	static final String DEFAULT_IMPL = "simple";
+	private Set<AFilterMapper> EMPTY_SET = Collections.unmodifiableSet(new HashSet<>());
 
-	private Map<String, AFilterMapper> videoMappers = new LinkedHashMap<>();
-	private Map<String, AFilterMapper> audioMappers = new LinkedHashMap<>();
+	private Set<AFilterMapper> allMappers = new HashSet<>();
+	private Map<String, Set<AFilterMapper>> videoMappers = new LinkedHashMap<>();
+	private Map<String, Set<AFilterMapper>> audioMappers = new LinkedHashMap<>();
 	
 	public static FiltersRegistry loadFromInternalJson() {
 		FiltersRegistry reg = new FiltersRegistry();
@@ -32,13 +35,13 @@ public class FiltersRegistry {
 	}
 
 	public Set<AFilterMapper> getAll() {
-		return new HashSet<>(videoMappers.values());
+		return Collections.unmodifiableSet(allMappers);
 	}
 	
-	public AFilterMapper get(String category, String name) {
+	public Set<AFilterMapper> get(String category, String vpName) {
 		switch(category) {
-			case "video": return videoMappers.computeIfAbsent(name, FiltersRegistry::notFound);
-			case "audio": return audioMappers.computeIfAbsent(name, FiltersRegistry::notFound);
+			case "video": return videoMappers.getOrDefault(vpName, EMPTY_SET);
+			case "audio": return audioMappers.getOrDefault(vpName, EMPTY_SET);
 			default: throw new IllegalArgumentException(category);
 		}
 	}
@@ -57,12 +60,14 @@ public class FiltersRegistry {
 		}
 	}
 	
-	private void defineMappers(JsonArray jsonArray, Map<String, AFilterMapper> map) {
+	private void defineMappers(JsonArray jsonArray, Map<String, Set<AFilterMapper>> map) {
 		jsonArray.forEach((jsonValue) -> {
 			JsonObject spec = jsonValue.asJsonObject();
 			AParamOrientedFilterMapper mapper = forJsonSpec(spec);
+			allMappers.add(mapper);
 			for(String vpName : mapper.observedParams()) {
-				map.put(vpName, mapper);				
+				Set<AFilterMapper> set = map.computeIfAbsent(vpName, k -> new HashSet<>());
+				set.add(mapper);
 			}
 		});
 	}
@@ -133,10 +138,6 @@ public class FiltersRegistry {
 			default:
 				throw new IllegalArgumentException("Bad JSON value as default value (" + name + ")");
 		}
-	}
-
-	private static AFilterMapper notFound(String name) throws IllegalArgumentException {
-		throw new IllegalArgumentException("Filter mapper not found: " + name);
 	}
 
 }
