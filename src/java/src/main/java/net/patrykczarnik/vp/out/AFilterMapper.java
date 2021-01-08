@@ -7,11 +7,11 @@ import net.patrykczarnik.utils.Positioned;
 import net.patrykczarnik.vp.in.VPScriptOption;
 
 public interface AFilterMapper {
-	List<Positioned<FFFilter>> getFFFilters(VPScriptOption vpOption);
+	void begin();
+	
+	void acceptOption(VPScriptOption vpOption);
 
-	default List<Positioned<FFFilter>> getPostponed() {
-		return List.of();
-	}
+	List<Positioned<FFFilter>> getCollectedFFFilters();
 	
 	// TODO SOX filters? Other options?
 	

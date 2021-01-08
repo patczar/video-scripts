@@ -6,4 +6,5 @@ set-audio -vol 3
 set-video -crop 1792,896,64,128 -scale 1280,640 -gamma 1.4
 file 02091530_0419.MP4 -s 230
 file 02091535_0420.MP4
+set-video -crop 1920,1080 -brightness 0.1
 file 02091540_0421.MP4 -e 100

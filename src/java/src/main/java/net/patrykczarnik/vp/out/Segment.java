@@ -47,14 +47,17 @@ public class Segment {
 		
 		FFFilterChain chain = FFFilterChain.withLabels(startLabels, List.of(endLabel), List.of(concatFilter));
 		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
+		for(AFilterMapper mapper : filtersRegistry.getAll()) {
+			mapper.begin();
+		}
 		Set<AFilterMapper> mappers = new LinkedHashSet<>();
 		for(VPScriptOption vpOption : remeberedOptions.getVideo().values()) {
 			AFilterMapper filterMapper = filtersRegistry.get("video", vpOption.getName());
-			allFilters.addAll(filterMapper.getFFFilters(vpOption));
+			filterMapper.acceptOption(vpOption);
 			mappers.add(filterMapper);
 		}
 		for(AFilterMapper filterMapper : mappers) {
-			allFilters.addAll(filterMapper.getPostponed());
+			allFilters.addAll(filterMapper.getCollectedFFFilters());
 		}
 		allFilters.sort(null);
 		chain.addFilters(CollectionUtils.mapList(allFilters, Positioned::getValue));

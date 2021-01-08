@@ -1,5 +1,6 @@
 package net.patrykczarnik.vp.out;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.patrykczarnik.ffmpeg.FFFilter;
@@ -8,6 +9,7 @@ import net.patrykczarnik.vp.in.VPScriptOption;
 
 public class FilterMapperDirectImpl implements AFilterMapper {
 	private int position;
+	private List<Positioned<FFFilter>> collectedFFFilters;
 	
 	public FilterMapperDirectImpl() {
 		this(POSITION_DEFAULT);
@@ -18,9 +20,19 @@ public class FilterMapperDirectImpl implements AFilterMapper {
 	}
 
 	@Override
-	public List<Positioned<FFFilter>> getFFFilters(VPScriptOption vpOption) {
+	public void begin() {
+		collectedFFFilters = new ArrayList<>();
+	}
+	
+	@Override
+	public void acceptOption(VPScriptOption vpOption) {
 		FFFilter filter = vpOption.toFFFilter();
-		return List.of(Positioned.of(position, filter));
+		collectedFFFilters.add(Positioned.of(position, filter));
+	}
+
+	@Override
+	public List<Positioned<FFFilter>> getCollectedFFFilters() {
+		return collectedFFFilters;
 	}
 
 }

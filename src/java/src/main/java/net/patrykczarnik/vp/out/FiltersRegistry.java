@@ -1,11 +1,13 @@
 package net.patrykczarnik.vp.out;
 
-import java.io.InputStream;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonString;
@@ -22,7 +24,6 @@ public class FiltersRegistry {
 
 	private Map<String, AFilterMapper> videoMappers = new LinkedHashMap<>();
 	private Map<String, AFilterMapper> audioMappers = new LinkedHashMap<>();
-	private Map<String, FilterMapperMergingImpl> mergingMappers = new LinkedHashMap<>();
 	
 	public static FiltersRegistry loadFromInternalJson() {
 		FiltersRegistry reg = new FiltersRegistry();
@@ -30,6 +31,10 @@ public class FiltersRegistry {
 		return reg;
 	}
 
+	public Set<AFilterMapper> getAll() {
+		return new HashSet<>(videoMappers.values());
+	}
+	
 	public AFilterMapper get(String category, String name) {
 		switch(category) {
 			case "video": return videoMappers.computeIfAbsent(name, FiltersRegistry::notFound);
@@ -44,38 +49,41 @@ public class FiltersRegistry {
 			
 			JsonObject jsonObject = jsonParser.getObject();
 			if(jsonObject.containsKey("video")) {
-				defineMappers(jsonObject.getJsonObject("video"), this.videoMappers);
+				defineMappers(jsonObject.getJsonArray("video"), this.videoMappers);
 			}
 			if(jsonObject.containsKey("audio")) {
-				defineMappers(jsonObject.getJsonObject("audio"), this.audioMappers);
+				defineMappers(jsonObject.getJsonArray("audio"), this.audioMappers);
 			}
 		}
 	}
 	
-	private void defineMappers(JsonObject jsonObject, Map<String, AFilterMapper> map) {
-		jsonObject.forEach((vpName, jsonValue) -> {
+	private void defineMappers(JsonArray jsonArray, Map<String, AFilterMapper> map) {
+		jsonArray.forEach((jsonValue) -> {
 			JsonObject spec = jsonValue.asJsonObject();
-			AFilterMapper mapper = forJsonSpec(vpName, spec);
-			map.put(vpName, mapper);
+			AParamOrientedFilterMapper mapper = forJsonSpec(spec);
+			for(String vpName : mapper.observedParams()) {
+				map.put(vpName, mapper);				
+			}
 		});
 	}
 	
-	private AFilterMapper forJsonSpec(String vpName, JsonObject spec) {
+	private AParamOrientedFilterMapper forJsonSpec(JsonObject spec) {
 		String impl = spec.getString("impl", DEFAULT_IMPL);
 		switch(impl) {
-			case "simple": return newSimple(vpName, spec);
-			case "merging": return getMerging(vpName, spec);
+			case "simple": return newSimple(spec);
+			case "merging": return getMerging(spec);
 			default: throw new IllegalArgumentException("Unknown filter mapper impl: " + impl);
 		}
 	}
 
-	private FilterMapperSimpleImpl newSimple(String vpName, JsonObject spec) {
-		String ffName = spec.getString("ff-name", vpName);
+	private AParamOrientedFilterMapper newSimple(JsonObject spec) {
 		int position = spec.getInt("position", AFilterMapper.POSITION_DEFAULT);
-		List<JsonString> paramsSpec = spec.getJsonArray("params").getValuesAs(JsonString.class);
-		JsonObject defaultParamsSpec = spec.getJsonObject("default-params");
+		String ffName = spec.getString("ff-filter");
+		String vpName = spec.getString("vp-param");
+		List<JsonString> paramsSpec = spec.getJsonArray("ff-params").getValuesAs(JsonString.class);
+		JsonObject defaultParamsSpec = spec.getJsonObject("ff-default-params");
 		
-		FilterMapperSimpleImpl mapper = new FilterMapperSimpleImpl(ffName, position);
+		FilterMapperSimpleImpl mapper = new FilterMapperSimpleImpl(vpName, ffName, position);
 		mapper.addParams(CollectionUtils.mapList(paramsSpec, JsonString::getString));
 		if(defaultParamsSpec != null)
 			defaultParamsSpec.forEach((k, v) -> {
@@ -84,16 +92,23 @@ public class FiltersRegistry {
 		return mapper;
 	}
 
-	private FilterMapperMergingImpl getMerging(String vpName, JsonObject spec) {
-		String ffName = spec.getString("ff-name", vpName);
-		String ffParam= spec.getString("ff-param", vpName);
+	private AParamOrientedFilterMapper getMerging(JsonObject spec) {
 		int position = spec.getInt("position", AFilterMapper.POSITION_DEFAULT);
+		String ffName = spec.getString("ff-filter");
+		JsonArray paramSpecs = spec.getJsonArray("param-mappings");
+		JsonObject defaultParamsSpec = spec.getJsonObject("ff-default-params");
 		
-		FilterMapperMergingImpl mapper = mergingMappers.get(ffName);
-		if(mapper == null) {
-			mapper = new FilterMapperMergingImpl(ffName, position);
-		}
-		mapper.addParamMapping(vpName, ffParam);
+		FilterMapperMergingImpl mapper = new FilterMapperMergingImpl(ffName, position);
+
+		paramSpecs.forEach(pspec -> {
+			String vpName = pspec.asJsonObject().getString("vp-param");
+			List<JsonString> paramsSpec = pspec.asJsonObject().getJsonArray("ff-params").getValuesAs(JsonString.class);
+			mapper.addParamMapping(vpName, CollectionUtils.mapList(paramsSpec, JsonString::getString));
+		});
+		if(defaultParamsSpec != null)
+			defaultParamsSpec.forEach((k, v) -> {
+				mapper.addDefaultParams(jsonValueToFFFilterOption(k, v));
+			});
 		return mapper;
 	}
 	

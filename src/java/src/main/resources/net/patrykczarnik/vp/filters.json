@@ -1,22 +1,30 @@
-{
-	"video": {
-		"crop": {
-			"impl": "simple",
-			"ff-name": "crop",
-			"position": 280,
-			"params": ["w", "h", "x", "y"]
+{"video": [
+	{"impl": "simple",
+	 "position": 280,
+	 "ff-filter": "crop",
+	 "vp-param": "crop",
+	 "ff-params": ["w", "h", "x", "y"]
+	},
+	{"impl": "simple",
+	 "position": 300,
+	 "ff-filter": "scale",
+	 "vp-param": "scale",
+	 "ff-params": ["w", "h"],
+	 "ff-default-params": {
+		"sws_flags": "bicubic"
+	 }
+	},
+	{"impl": "merging",
+	 "position": 350,
+	 "ff-filter": "eq",
+	 "param-mappings" : [
+		{"vp-param": "gamma",
+		 "ff-params": ["gamma"]
 		},
-		"scale": {
-			"impl": "simple",
-			"ff-name": "scale",
-			"position": 300,
-			"params": ["w", "h"]
-		},
-		"gamma": {
-			"impl": "merging",
-			"ff-name": "eq",
-			"ff-param": "gamma"
-			
+		{"vp-param": "brightness",
+		 "ff-params": ["brightness"]
 		}
-	}
+	 ]
+	}	
+]
 }
