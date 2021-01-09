@@ -79,6 +79,10 @@ public class VPScriptOption implements CommandText, Cloneable {
 		return FFOption.of(getName(), textValue());
 	}
 
+	public FFOption toFFOption(String name) {
+		return FFOption.of(name, textValue());
+	}
+
 	public FFFilterOption toFFFilterOption() {
 		return getValue().toFFFilterOption(getName());
 	}

@@ -3,17 +3,20 @@ package net.patrykczarnik.vp.out;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import net.patrykczarnik.commands.CommandScript;
 import net.patrykczarnik.commands.CommandScriptImpl;
+import net.patrykczarnik.commands.CommandScriptWithOptions;
 import net.patrykczarnik.ffmpeg.FFFilter;
 import net.patrykczarnik.ffmpeg.FFFilterChain;
 import net.patrykczarnik.ffmpeg.FFFilterGraph;
 import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.ffmpeg.FFInput;
 import net.patrykczarnik.ffmpeg.FFMPEG;
+import net.patrykczarnik.ffmpeg.FFMap;
 import net.patrykczarnik.ffmpeg.FFOption;
 import net.patrykczarnik.ffmpeg.FFOutput;
 import net.patrykczarnik.vp.in.VPScriptEntryFile;
@@ -31,7 +34,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	private List<Segment> segments;
 	private Segment currentSegment;
 	private CurrentOptions currentOptions;
-	private CommandScript resultScript = null;
+	private CommandScriptWithOptions resultScript = null;
 	
 	public TranslatorImpl1(FiltersRegistry filtersRegistry) {
 		this.filtersRegistry = filtersRegistry;
@@ -50,6 +53,8 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		int ninp = 0;
 		
 		FFMPEG ffmpeg = new FFMPEG();
+		applyGlobalOptions(ffmpeg);
+		
 		ffmpeg.setFilterGraph(FFFilterGraph.empty());
 		for(Segment segment : segments) {
 			ffmpeg.addInputs(segment.getInputs());
@@ -71,8 +76,10 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		ffmpeg.getFilterGraph().addChain(concatSegmentsChain);
 		
 		applyOutputOptions(ffmpeg);
-		
-		resultScript = CommandScriptImpl.of(ffmpeg);
+		if(currentOptions.getGlobal().containsKey("dir")) {
+			String dir = currentOptions.getGlobal().get("dir").textValue();
+			resultScript = CommandScriptImpl.of(ffmpeg).setWorkingDir(dir);
+		}
 	}
 
 	@Override
@@ -100,7 +107,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	}
 
 	@Override
-	protected CommandScript getResultScript() {
+	protected CommandScriptWithOptions getResultScript() {
 		return resultScript;
 	}
 
@@ -114,7 +121,23 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		currentSegment = null;
 	}
 
+	private void applyGlobalOptions(FFMPEG ffmpeg) {
+		for(VPScriptOption vpOption : currentOptions.getGlobal().values()) {
+			switch(vpOption.getName()) {
+				case "overwrite":
+					ffmpeg.addGlobalOptions(FFOption.of("y"));
+					break;
+			}
+		}
+	}
+	
 	private void applyOutputOptions(FFMPEG ffmpeg) {
+		Map<String, String> optionsMapping = Map.of(
+				"codec", "c:v",
+				"profile", "profile:v",
+				"preset", "preset:v",
+				"crf", "crf"
+		);
 		Map<String, VPScriptOption> outputOptions = currentOptions.getOutput();
 		String outputFile;
 		if(outputOptions.containsKey("out")) {
@@ -123,9 +146,12 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 			outputFile = "out.mp4";
 		}
 		FFOutput ffOutput = FFOutput.forFile(outputFile);
-		outputOptions.forEach((key, option) -> {			
-			ffOutput.withOption(option.toFFOption());
+		outputOptions.forEach((key, option) -> {
+			if(optionsMapping.containsKey(key)) {
+				ffOutput.withOption(option.toFFOption(optionsMapping.get(key)));
+			}
 		});
+		ffOutput.withMap(FFMap.ofLabel("v"));
 		ffmpeg.addOutputs(ffOutput);
 	}
 

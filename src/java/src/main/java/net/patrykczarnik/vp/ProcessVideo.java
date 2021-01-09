@@ -5,6 +5,7 @@ import java.io.File;
 import net.patrykczarnik.commands.Command;
 import net.patrykczarnik.commands.CommandRunner;
 import net.patrykczarnik.commands.CommandScript;
+import net.patrykczarnik.commands.CommandScriptWithOptions;
 import net.patrykczarnik.commands.ExecutionException;
 import net.patrykczarnik.vp.in.VPParserException;
 import net.patrykczarnik.vp.in.VPScript;
@@ -38,13 +39,15 @@ public class ProcessVideo {
 			System.out.println(script.getCmdText());
 			System.out.println();
 
-			CommandScript scriptToRun = VPRunner.ffmpegFromScript(script);
+			CommandScriptWithOptions scriptToRun = VPRunner.ffmpegFromScript(script);
 			System.out.println("Converted to script:");
 			System.out.println(scriptToRun);
 			System.out.println();
+			
 			if(run) {
 				try {
-					CommandRunner.execute(scriptToRun);
+					CommandRunner cmdRunner = new CommandRunner(scriptToRun.getWorkingDir(), true);
+					cmdRunner.execute(scriptToRun);
 				} catch(ExecutionException e) {
 					e.printStackTrace();
 				}

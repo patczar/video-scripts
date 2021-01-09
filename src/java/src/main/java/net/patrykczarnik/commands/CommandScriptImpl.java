@@ -1,13 +1,15 @@
 package net.patrykczarnik.commands;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CommandScriptImpl implements CommandScript {
+public class CommandScriptImpl implements CommandScriptWithOptions {
 	private List<Command> commands;
+	private File workingDir;
 	
 	private CommandScriptImpl() {
 		this.commands = new ArrayList<>();
@@ -33,22 +35,37 @@ public class CommandScriptImpl implements CommandScript {
 		return Collections.unmodifiableList(commands);
 	}
 
-	public void add(Command... commands) {
+	public CommandScriptImpl add(Command... commands) {
 		for (Command command : commands) {
 			this.commands.add(command);
 		}
+		return this;
 	}
 
-	public void add(Iterable<Command> commands) {
+	public CommandScriptImpl add(Iterable<Command> commands) {
 		for (Command command : commands) {
 			this.commands.add(command);
 		}
+		return this;
+	}
+
+	public File getWorkingDir() {
+		return workingDir;
+	}
+	
+	public CommandScriptImpl setWorkingDir(File dir) {
+		this.workingDir = dir;
+		return this;
+	}
+	
+	public CommandScriptImpl setWorkingDir(String dir) {
+		return setWorkingDir(new File(dir));
 	}
 
 	@Override
 	public String toString() {
 		return "Script:\n" + 
-			this.getCommands().stream()
+				this.getCommands().stream()
 				.map(Command::toString)
 				.collect(Collectors.joining("\n"));
 	}

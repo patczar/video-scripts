@@ -7,7 +7,8 @@ public class CommandRunnerETest {
 		Command command = CommandImpl.of("ls", "-l", "-a");
 		System.out.println("Starting command " + command);
 		try {
-			CommandRunner.execute(command);
+			CommandRunner commandRunner = new CommandRunner();
+			commandRunner.execute(command);
 			System.out.println("Finished command");
 		} catch (Exception e) {
 			System.out.println("Execution error: " + e);

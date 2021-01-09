@@ -61,5 +61,4 @@ public abstract class FFOption implements CommandFragment {
 			return List.of(value);
 		}
 	}
-	
 }

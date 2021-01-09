@@ -1,10 +1,10 @@
-set-global -overwrite
+set-global -overwrite -dir /tmp/vid
 set-input -framerate ntsc30
 set-output -out wynikowy.mp4 -framerate 30 -codec h264 -crf 24 -profile high -preset medium
 set-speed -mod 4
 set-audio -vol 3
-set-video -crop 1792,896,64,128 -scale 1280,640 -gamma 1.4
+set-video -crop 1920,960,0,128 -scale 1280,640 -gamma 1.4
 file 02091530_0419.MP4 -s 230
 file 02091535_0420.MP4
-set-video -crop 1920,1080 -brightness 0.1
+set-video -crop 1800,900 -brightness 0.1
 file 02091540_0421.MP4 -e 100
