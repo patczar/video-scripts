@@ -1,5 +1,11 @@
 {"video": [
 	{"impl": "simple",
+	 "position": 270,
+	 "ff-filter": "rotate",
+	 "vp-param": "rotate",
+	 "ff-params": ["angle", "fillcolor"]
+	},
+	{"impl": "simple",
 	 "position": 280,
 	 "ff-filter": "crop",
 	 "vp-param": "crop",
@@ -14,15 +20,27 @@
 		"sws_flags": "bicubic"
 	 }
 	},
+	{"impl": "simple",
+	 "position": 345,
+	 "ff-filter": "hqdn3d",
+	 "vp-param": "dn3",
+	 "ff-params": ["luma_spatial", "chroma_spatial"]
+	},
 	{"impl": "merging",
 	 "position": 350,
 	 "ff-filter": "eq",
 	 "param-mappings" : [
 		{"vp-param": "gamma",
-		 "ff-params": ["gamma"]
+		 "ff-params": ["gamma","gamma_r","gamma_g","gamma_b"]
 		},
 		{"vp-param": "brightness",
 		 "ff-params": ["brightness"]
+		},
+		{"vp-param": "contrast",
+		 "ff-params": ["contrast"]
+		},
+		{"vp-param": "saturation",
+		 "ff-params": ["saturation"]
 		}
 	 ]
 	}	
