@@ -33,23 +33,18 @@ public class Segment {
 		return Collections.unmodifiableList(inputs);
 	}
 
-	public List<FFFilterChain> getCombinedChains(int nseg, int ninp) {
-		FFFilter concatFilter = FFFilter.newFilter("concat",
-				FFFilterOption.integer("n", inputs.size()),
-				FFFilterOption.integer("v", 1),
-				FFFilterOption.integer("a", 0));
-		
-		List<String> startLabels = IntStream.range(ninp, ninp + inputs.size())
-				.mapToObj(i -> i + ":0")
-				.collect(Collectors.toList());
-
-		String endLabel = segmentLabel(nseg);
-		
-		FFFilterChain chain = FFFilterChain.withLabels(startLabels, List.of(endLabel), List.of(concatFilter));
-		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
+	private List<Positioned<FFFilter>> makeAllFilters() {
 		for(AFilterMapper mapper : filtersRegistry.getAll()) {
 			mapper.begin();
 		}
+		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
+		allFilters.addAll(makeVideoFilters());
+		allFilters.sort(null);
+		return allFilters;
+	}
+
+	private List<Positioned<FFFilter>> makeVideoFilters() {
+		List<Positioned<FFFilter>> filters = new ArrayList<>();
 		Set<AFilterMapper> mappers = new LinkedHashSet<>();
 		for(VPScriptOption vpOption : remeberedOptions.getVideo().values()) {
 			Set<AFilterMapper> foundMappers = filtersRegistry.get("video", vpOption.getName());
@@ -59,16 +54,52 @@ public class Segment {
 			}
 		}
 		for(AFilterMapper filterMapper : mappers) {
-			allFilters.addAll(filterMapper.getCollectedFFFilters());
+			filters.addAll(filterMapper.getCollectedFFFilters());
 		}
-		allFilters.sort(null);
-		chain.addFilters(CollectionUtils.mapList(allFilters, Positioned::getValue));
+		return filters;
+	}
+	
+	public List<FFFilterChain> getCombinedChains(int nseg, int ninp) {
+		final int n = inputs.size();
+		List<Positioned<FFFilter>> allFilters = makeAllFilters();
+
+		List<FFFilter> firstStageFilters = CollectionUtils.mapList(
+				CollectionUtils.sublist(allFilters,
+						(Positioned<FFFilter> elt) -> elt.posBetween(AFilterMapper.POSITION_START, AFilterMapper.POSITION_JOIN_INPUTS_TO_SEGMENT)),
+				Positioned::getValue);
+
+		List<FFFilterChain> firstStageChains = new ArrayList<>();
+		List<String> labelsA = new ArrayList<>();
+		for(int i = 0; i < n; i++) {
+			int currentInputNo = ninp + i;
+			String inputLabel = currentInputNo + ":0";
+			String labelA = "A"+currentInputNo;
+			labelsA.add(labelA);
+			firstStageChains.add(FFFilterChain.withLabels(List.of(inputLabel), List.of(labelA), firstStageFilters));
+		}
 		
-		return List.of(chain);
+		FFFilter concatFilter = FFFilter.newFilter("concat",
+				FFFilterOption.integer("n", n),
+				FFFilterOption.integer("v", 1),
+				FFFilterOption.integer("a", 0));
+
+		String endLabel = segmentLabel(nseg);
+		
+		List<FFFilter> segmentFilters = CollectionUtils.mapList(
+				CollectionUtils.sublist(allFilters,
+						(Positioned<FFFilter> elt) -> elt.posBetween(AFilterMapper.POSITION_JOIN_INPUTS_TO_SEGMENT, AFilterMapper.POSITION_AUDIO_START)),
+				Positioned::getValue);
+		FFFilterChain segmentChain = FFFilterChain.withLabels(labelsA, List.of(endLabel), List.of(concatFilter));
+		segmentChain.addFilters(segmentFilters);
+		
+		List<FFFilterChain> allChains = new ArrayList<>();
+		allChains.addAll(firstStageChains);
+		allChains.add(segmentChain);
+		return allChains;
 	}
 	
 	public static String segmentLabel(int nseg) {
-		return "seg" + nseg;
+		return "B" + nseg;
 	}
 
 	public void remeberOptions(CurrentOptions currentOptions) {

@@ -18,7 +18,7 @@ public interface AFilterMapper {
 	public static final int POSITION_DEFAULT = 400;
 
 	public static final int POSITION_START = 0;
-	public static final int POSITION_VIDEO_START = 100;
+	public static final int POSITION_JOIN_INPUTS_TO_SEGMENT = 100;
 	public static final int POSITION_VIDEO_SELECT = 150;
 	public static final int POSITION_VIDEO_FORMAT = 200;
 	public static final int POSITION_VIDEO_CROP = 280;
