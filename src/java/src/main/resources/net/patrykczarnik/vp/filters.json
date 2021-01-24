@@ -43,6 +43,11 @@
 		 "ff-params": ["saturation"]
 		}
 	 ]
-	}	
+	},
+	{"impl": "custom",
+	 "position": 351,
+	 "vp-params": ["autocurves"],
+	 "class": "net.patrykczarnik.vp.custom_filters.AutoCurves"
+	}
 ]
 }
