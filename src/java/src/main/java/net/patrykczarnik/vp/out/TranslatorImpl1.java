@@ -129,6 +129,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 					break;
 			}
 		}
+		ffmpeg.addGlobalOptions(FFOption.of("an")); // FIXME
 	}
 	
 	private void applyOutputOptions(FFMPEG ffmpeg) {
@@ -139,6 +140,9 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 				"crf", "crf"
 		);
 		Map<String, VPScriptOption> outputOptions = currentOptions.getOutput();
+		if(outputOptions.containsKey("framerate")) {
+			ffmpeg.addGlobalOptions(FFOption.of("r", outputOptions.get("framerate").textValue()));
+		}
 		String outputFile;
 		if(outputOptions.containsKey("out")) {
 			outputFile = outputOptions.get("out").textValue();

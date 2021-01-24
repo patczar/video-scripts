@@ -1,6 +1,6 @@
 set-global -overwrite -dir /tmp/vid
 set-input -framerate ntsc30
-set-output -out wynikowy.mp4 -framerate 30 -codec h264 -crf 24 -profile high -preset medium
+set-output -out wynikowy.mkv -framerate 30 -codec h264 -crf 24 -profile high -preset medium
 set-speed -mod 4
 set-audio -vol 3
 set-video -crop 1920,960,0,128 -scale 1280,640 -gamma 1.4

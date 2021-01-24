@@ -38,11 +38,42 @@ public class Segment {
 			mapper.begin();
 		}
 		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
+		allFilters.addAll(makeSpeedFilters());
 		allFilters.addAll(makeVideoFilters());
 		allFilters.sort(null);
 		return allFilters;
 	}
 
+	private List<Positioned<FFFilter>> makeSpeedFilters() {
+		List<Positioned<FFFilter>> filters = new ArrayList<>();
+		Integer framerate = null;
+		String pts = "PTS";
+		String tb = "TB";
+		if(remeberedOptions.getOutput().containsKey("framerate")) {
+			framerate = remeberedOptions.getOutput().get("framerate").intValue();
+			pts = "N";
+			tb = String.format("1/%d", framerate);
+		}
+		
+		if(remeberedOptions.getSpeed().containsKey("mod")) {
+			int mod = remeberedOptions.getSpeed().get("mod").intValue();
+			FFFilter select = FFFilter.newFilter("select", FFFilterOption.citedText(String.format("not(mod(n,%d))", mod)));
+			filters.add(Positioned.of(AFilterMapper.POSITION_VIDEO_SELECT_SPEED, select));
+			if(framerate == null) {
+				pts = String.format("%s/%d", pts, mod);
+			}
+		}
+		if(!"TB".equals(tb)) {
+			FFFilter tbFilter = FFFilter.newFilter("settb", FFFilterOption.text(tb));
+			filters.add(Positioned.of(AFilterMapper.POSITION_JOIN_INPUTS_TO_SEGMENT+1, tbFilter));
+		}
+		if(!"PTS".equals(pts)) {
+			FFFilter ptsFilter = FFFilter.newFilter("setpts", FFFilterOption.text(pts));
+			filters.add(Positioned.of(AFilterMapper.POSITION_JOIN_INPUTS_TO_SEGMENT+1, ptsFilter));
+		}
+		return filters;
+	}
+	
 	private List<Positioned<FFFilter>> makeVideoFilters() {
 		List<Positioned<FFFilter>> filters = new ArrayList<>();
 		Set<AFilterMapper> mappers = new LinkedHashSet<>();
