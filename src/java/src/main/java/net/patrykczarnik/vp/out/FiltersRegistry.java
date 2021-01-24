@@ -77,6 +77,7 @@ public class FiltersRegistry {
 		switch(impl) {
 			case "simple": return newSimple(spec);
 			case "merging": return getMerging(spec);
+			case "custom": return getCustom(spec);
 			default: throw new IllegalArgumentException("Unknown filter mapper impl: " + impl);
 		}
 	}
@@ -115,6 +116,17 @@ public class FiltersRegistry {
 				mapper.addDefaultParams(jsonValueToFFFilterOption(k, v));
 			});
 		return mapper;
+	}
+	
+	private AParamOrientedFilterMapper getCustom(JsonObject spec) {
+		String className = spec.getString("class");
+		try {
+			Class<?> cls = Class.forName(className);
+			AParamOrientedFilterMapper mapper = (AParamOrientedFilterMapper)cls.newInstance();
+			return mapper;
+		} catch(ClassNotFoundException | InstantiationException | IllegalAccessException | ClassCastException e) {
+			throw new IllegalArgumentException("Implementation class not found for filter: " + className, e);
+		}
 	}
 	
 	private static FFFilterOption jsonValueToFFFilterOption(String name, JsonValue value) {
