@@ -76,6 +76,16 @@ public class Segment {
 	
 	private List<Positioned<FFFilter>> makeVideoFilters() {
 		List<Positioned<FFFilter>> filters = new ArrayList<>();
+		if(remeberedOptions.getGlobal().containsKey("pixel_format")) {
+			String format = remeberedOptions.getGlobal().get("pixel_format").textValue();
+			FFFilter filter = FFFilter.newFilter("format", FFFilterOption.text(format ));
+			filters.add(Positioned.of(AFilterMapper.POSITION_VIDEO_FORMAT, filter));
+		}
+		if(remeberedOptions.getOutput().containsKey("pixel_format")) {
+			String format = remeberedOptions.getOutput().get("pixel_format").textValue();
+			FFFilter filter = FFFilter.newFilter("format", FFFilterOption.text(format ));
+			filters.add(Positioned.of(AFilterMapper.POSITION_VIDEO_FINAL_FORMAT, filter));
+		}
 		Set<AFilterMapper> mappers = new LinkedHashSet<>();
 		for(VPScriptOption vpOption : remeberedOptions.getVideo().values()) {
 			Set<AFilterMapper> foundMappers = filtersRegistry.get("video", vpOption.getName());
