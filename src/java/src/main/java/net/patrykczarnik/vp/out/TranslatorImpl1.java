@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -133,23 +134,37 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	}
 	
 	private void applyOutputOptions(FFMPEG ffmpeg) {
-		Map<String, String> optionsMapping = Map.of(
-				"codec", "c:v",
-				"profile", "profile:v",
-				"preset", "preset:v",
-				"crf", "crf"
-		);
 		Map<String, VPScriptOption> outputOptions = currentOptions.getOutput();
-		if(outputOptions.containsKey("framerate")) {
-			ffmpeg.addGlobalOptions(FFOption.of("r", outputOptions.get("framerate").textValue()));
-		}
 		String outputFile;
 		if(outputOptions.containsKey("out")) {
 			outputFile = outputOptions.get("out").textValue();
 		} else {
 			outputFile = "out.mp4";
 		}
+		if(outputOptions.containsKey("framerate")) {
+			ffmpeg.addGlobalOptions(FFOption.of("r", outputOptions.get("framerate").textValue()));
+		}
+		String codec = "h264";
+		if(outputOptions.containsKey("codec")) {
+			codec = outputOptions.get("codec").textValue();
+		}
+		
 		FFOutput ffOutput = FFOutput.forFile(outputFile);
+		ffOutput.withOption(FFOption.of("c:v", codec));
+		Map<String, String> optionsMapping = new TreeMap<>(Map.of(
+				"profile", "profile:v",
+				"preset", "preset:v",
+				"crf", "crf",
+				"bitrate", "b:v"
+		));
+		if(codec.contains("nvenc")) {
+			optionsMapping.put("crf", "cq:v");
+			ffOutput.withOption(FFOption.of("rc:v", "vbr_hq"));
+			if(!outputOptions.containsKey("bitrate")) {
+				ffOutput.withOption(FFOption.of("b:v", "40m"));
+			}
+			ffOutput.withOption(FFOption.of("maxrate:v", "50m"));
+		}
 		outputOptions.forEach((key, option) -> {
 			if(optionsMapping.containsKey(key)) {
 				ffOutput.withOption(option.toFFOption(optionsMapping.get(key)));

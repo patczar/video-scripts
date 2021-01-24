@@ -1,9 +1,10 @@
 set-global -overwrite -dir /tmp/vid -pixel_format yuv444p16le
 set-input -framerate ntsc30
-set-output -out wynikowy.mkv -pixel_format yuv420p -framerate 30 -codec h264 -crf 24 -profile high444 -preset medium
+# set-output -out wynikowy.mkv -pixel_format yuv420p -framerate 30 -codec libx264 -crf 23 -profile high -preset medium
+set-output -out wynikowy.mkv -pixel_format yuv420p -framerate 30 -codec h264_nvenc -crf 20 -profile high -preset medium
 set-speed -mod 4
 set-audio -vol 3
-set-video -crop 1920,960,0,128 -scale 1280,640 -saturation 1.2 -autocurves 1.25,0.5,0.2
+set-video -crop 1920,960,0,80 -scale 1280,640 -saturation 1.2 -autocurves 1.25,0.5,0.2
 file 02091530_0419.MP4 -s 230
 file 02091535_0420.MP4
 set-video -crop 1800,900
