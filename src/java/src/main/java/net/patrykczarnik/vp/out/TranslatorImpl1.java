@@ -3,11 +3,13 @@ package net.patrykczarnik.vp.out;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import net.patrykczarnik.commands.Command;
 import net.patrykczarnik.commands.CommandScript;
 import net.patrykczarnik.commands.CommandScriptImpl;
 import net.patrykczarnik.commands.CommandScriptWithOptions;
@@ -20,6 +22,7 @@ import net.patrykczarnik.ffmpeg.FFMPEG;
 import net.patrykczarnik.ffmpeg.FFMap;
 import net.patrykczarnik.ffmpeg.FFOption;
 import net.patrykczarnik.ffmpeg.FFOutput;
+import net.patrykczarnik.sox.Sox;
 import net.patrykczarnik.vp.in.VPScriptEntryFile;
 import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
 import net.patrykczarnik.vp.in.VPScriptOption;
@@ -34,8 +37,11 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	private FiltersRegistry filtersRegistry;
 	private List<Segment> segments;
 	private Segment currentSegment;
+	private int nextSegmentNumber, nextInputNumber;
 	private CurrentOptions currentOptions;
-	private CommandScriptWithOptions resultScript = null;
+	private CommandScriptImpl resultScript = null;
+	private AAudioProcessor audioProcessor;
+	private List<VPScriptEntryFile> allFiles;
 	
 	public TranslatorImpl1(FiltersRegistry filtersRegistry) {
 		this.filtersRegistry = filtersRegistry;
@@ -43,6 +49,9 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 
 	@Override
 	public void begin() {
+		nextSegmentNumber = 0;
+		nextInputNumber = 0;
+		allFiles = new ArrayList<>();
 		segments = new ArrayList<>();
 		currentOptions = new CurrentOptions();
 	}
@@ -50,37 +59,86 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	@Override
 	public void end() {
 		endSegment();
+				
+		if(currentOptions.getGlobal().containsKey("dir")) {
+			String dir = currentOptions.getGlobal().get("dir").textValue();
+			resultScript = CommandScriptImpl.empty().setWorkingDir(dir);
+		}
+		
+		selectAudioProcessor();
+		resultScript.add(createAudioCommands());
+		
+		FFMPEG finalFFMPEG = createFinalFFMPEG();
+		resultScript.add(finalFFMPEG);
+
+		resultScript.add(createLastCommands());
+	}
+	
+	private FFMPEG createFinalFFMPEG() {
 		int nseg = 0;
 		int ninp = 0;
+		int naudio = 0;
 		
 		FFMPEG ffmpeg = new FFMPEG();
 		applyGlobalOptions(ffmpeg);
-		
 		ffmpeg.setFilterGraph(FFFilterGraph.empty());
+		
+		List<String> lastConcatInputLabels = new ArrayList<>();
+		
 		for(Segment segment : segments) {
 			ffmpeg.addInputs(segment.getInputs());
 			ffmpeg.getFilterGraph().addChains(segment.getCombinedChains(nseg, ninp));
+			lastConcatInputLabels.add(Segment.segmentLabel(nseg));
+			Optional<FFFilterChain> segmentChain = audioProcessor.audioSegmentChain(segment);
+			if(segmentChain.isPresent()) {
+				ffmpeg.getFilterGraph().addChains(segmentChain.get());
+				lastConcatInputLabels.addAll(segmentChain.get().getEndLabels());
+				naudio++;
+			}
 			nseg += 1;
 			ninp += segment.getInputs().size();
 		}
 		
-		List<String> startLabels = IntStream.range(0, nseg)
-				.mapToObj(Segment::segmentLabel)
-				.collect(Collectors.toList());
-		
+		int audioStreams = naudio > 0 ? 1 : 0;
 		FFFilter concatFilter = FFFilter.newFilter("concat",
 				FFFilterOption.integer("n", segments.size()),
 				FFFilterOption.integer("v", 1),
-				FFFilterOption.integer("a", 0));
+				FFFilterOption.integer("a", audioStreams));
 		
-		FFFilterChain concatSegmentsChain = FFFilterChain.withLabels(startLabels, List.of("v"), List.of(concatFilter));
+		FFFilterChain concatSegmentsChain = FFFilterChain.withLabels(lastConcatInputLabels, List.of("v"), List.of(concatFilter));
 		ffmpeg.getFilterGraph().addChain(concatSegmentsChain);
 		
 		applyOutputOptions(ffmpeg);
-		if(currentOptions.getGlobal().containsKey("dir")) {
-			String dir = currentOptions.getGlobal().get("dir").textValue();
-			resultScript = CommandScriptImpl.of(ffmpeg).setWorkingDir(dir);
+		return ffmpeg;
+	}
+
+	private void selectAudioProcessor() {
+		String audioProcessorName = Optional.ofNullable(
+				currentOptions.getAudio().get("impl"))
+				.map(VPScriptOption::textValue).orElse("");
+		audioProcessor = AAudioProcessor.getImpl(audioProcessorName);
+	}
+
+	private List<Command> createAudioCommands() {
+		List<Command> list = new ArrayList<>();
+		if(audioProcessor != null) {
+			list.addAll(audioProcessor.commandsBefore());
+			for(VPScriptEntryFile file : allFiles) {
+				list.addAll(audioProcessor.commandsForEachFile(file));
+			}
+			for(Segment segment : segments) {
+				list.addAll(audioProcessor.commandsForEachSegment(segment));
+			}
 		}
+		return list;
+	}
+
+	private List<Command> createLastCommands() {
+		List<Command> list = new ArrayList<>();
+		if(audioProcessor != null) {
+			list.addAll(audioProcessor.commandsAfter());
+		}
+		return list;
 	}
 
 	@Override
@@ -104,7 +162,10 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		if(entry.getEnd() != null) {
 			newInput.withOption(FFOption.of("to", String.valueOf(entry.getEnd())));
 		}
-		currentSegment.addInput(newInput);		
+		currentSegment.addInput(newInput);
+		
+		nextInputNumber++;
+		allFiles.add(entry);
 	}
 
 	@Override
@@ -113,7 +174,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	}
 
 	private void beginSegment() {
-		currentSegment = new Segment(filtersRegistry);
+		currentSegment = new Segment(filtersRegistry, nextSegmentNumber++, nextInputNumber);
 		currentSegment.remeberOptions(currentOptions);
 	}
 

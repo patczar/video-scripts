@@ -25,6 +25,7 @@ public interface AFilterMapper {
 	public static final int POSITION_VIDEO_SIZE = 300;
 	public static final int POSITION_VIDEO_EQ = 350;
 	public static final int POSITION_VIDEO_FINAL_FORMAT = 500;
+	public static final int POSITION_VIDEO_END = 550;
 
 	public static final int POSITION_AUDIO_START = 600;
 	public static final int POSITION_AUDIO_END = 700;

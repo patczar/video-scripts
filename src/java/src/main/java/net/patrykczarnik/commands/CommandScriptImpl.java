@@ -42,7 +42,12 @@ public class CommandScriptImpl implements CommandScriptWithOptions {
 		return this;
 	}
 
-	public CommandScriptImpl add(Iterable<Command> commands) {
+	public CommandScriptImpl add(Collection<? extends Command> commands) {
+		this.commands.addAll(commands);
+		return this;
+	}
+
+	public CommandScriptImpl add(Iterable<? extends Command> commands) {
 		for (Command command : commands) {
 			this.commands.add(command);
 		}

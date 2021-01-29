@@ -5,8 +5,6 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import net.patrykczarnik.ffmpeg.FFFilter;
 import net.patrykczarnik.ffmpeg.FFFilterChain;
@@ -17,12 +15,15 @@ import net.patrykczarnik.utils.Positioned;
 import net.patrykczarnik.vp.in.VPScriptOption;
 
 public class Segment {
+	private int segmentNumber, firstInputNumber;
 	private List<FFInput> inputs = new ArrayList<>();
 	private CurrentOptions remeberedOptions;
 	private FiltersRegistry filtersRegistry;
 	
-	public Segment(FiltersRegistry filtersRegistry) {
+	public Segment(FiltersRegistry filtersRegistry, int segmentNumber, int firstInputNumber) {
 		this.filtersRegistry = filtersRegistry;
+		this.segmentNumber = segmentNumber;
+		this.firstInputNumber = firstInputNumber;
 	}
 
 	public void addInput(FFInput input) {
@@ -149,6 +150,14 @@ public class Segment {
 	
 	public CurrentOptions getRemeberedOptions() {
 		return remeberedOptions;
+	}
+
+	public int getSegmentNumber() {
+		return segmentNumber;
+	}
+
+	public int getFirstInputNumber() {
+		return firstInputNumber;
 	}
 
 }

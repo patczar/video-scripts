@@ -4,6 +4,7 @@ import net.patrykczarnik.commands.CommandText;
 import net.patrykczarnik.ffmpeg.FFFilter;
 import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.ffmpeg.FFOption;
+import net.patrykczarnik.vp.in.VPScriptValue.ValueType;
 
 public class VPScriptOption implements CommandText, Cloneable {
 	private final String name;
@@ -33,6 +34,10 @@ public class VPScriptOption implements CommandText, Cloneable {
 
 	public VPScriptValue getValue() {
 		return value;
+	}
+
+	public ValueType getValueType() {
+		return value.getType();
 	}
 
 	public String textValue() {
