@@ -39,4 +39,8 @@ public final class TranslationCommons {
 		return speed * outputFps / inputFps;
 	}
 
+	public static String segmentLabel(int nseg) {
+		return "B" + nseg;
+	}
+
 }

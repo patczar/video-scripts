@@ -4,13 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import net.patrykczarnik.commands.Command;
-import net.patrykczarnik.commands.CommandScript;
 import net.patrykczarnik.commands.CommandScriptImpl;
 import net.patrykczarnik.commands.CommandScriptWithOptions;
 import net.patrykczarnik.ffmpeg.FFFilter;
@@ -22,7 +18,6 @@ import net.patrykczarnik.ffmpeg.FFMPEG;
 import net.patrykczarnik.ffmpeg.FFMap;
 import net.patrykczarnik.ffmpeg.FFOption;
 import net.patrykczarnik.ffmpeg.FFOutput;
-import net.patrykczarnik.sox.Sox;
 import net.patrykczarnik.vp.in.VPScriptEntryFile;
 import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
 import net.patrykczarnik.vp.in.VPScriptOption;
@@ -40,8 +35,10 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	private int nextSegmentNumber, nextInputNumber;
 	private CurrentOptions currentOptions;
 	private CommandScriptImpl resultScript = null;
+	private AVideoProcessor videoProcessor;
 	private AAudioProcessor audioProcessor;
 	private List<VPScriptEntryFile> allFiles;
+	private boolean hasAudio = false;
 	
 	public TranslatorImpl1(FiltersRegistry filtersRegistry) {
 		this.filtersRegistry = filtersRegistry;
@@ -66,6 +63,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		}
 		
 		selectAudioProcessor();
+		selectVideoProcessor();
 		resultScript.add(createAudioCommands());
 		
 		FFMPEG finalFFMPEG = createFinalFFMPEG();
@@ -76,7 +74,6 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	
 	private FFMPEG createFinalFFMPEG() {
 		int nseg = 0;
-		int ninp = 0;
 		int naudio = 0;
 		
 		FFMPEG ffmpeg = new FFMPEG();
@@ -87,8 +84,8 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		
 		for(Segment segment : segments) {
 			ffmpeg.addInputs(segment.getInputs());
-			ffmpeg.getFilterGraph().addChains(segment.getCombinedChains(nseg, ninp));
-			lastConcatInputLabels.add(Segment.segmentLabel(nseg));
+			ffmpeg.getFilterGraph().addChains(videoProcessor.getCombinedChains(segment));
+			lastConcatInputLabels.add(TranslationCommons.segmentLabel(nseg));
 			Optional<FFFilterChain> segmentChain = audioProcessor.audioSegmentChain(segment);
 			if(segmentChain.isPresent()) {
 				ffmpeg.getFilterGraph().addChains(segmentChain.get());
@@ -96,16 +93,16 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 				naudio++;
 			}
 			nseg += 1;
-			ninp += segment.getInputs().size();
 		}
 		
-		int audioStreams = naudio > 0 ? 1 : 0;
+		hasAudio = naudio > 0;
+		int audioStreams = hasAudio ? 1 : 0;
 		FFFilter concatFilter = FFFilter.newFilter("concat",
 				FFFilterOption.integer("n", segments.size()),
 				FFFilterOption.integer("v", 1),
 				FFFilterOption.integer("a", audioStreams));
 		
-		FFFilterChain concatSegmentsChain = FFFilterChain.withLabels(lastConcatInputLabels, List.of("v"), List.of(concatFilter));
+		FFFilterChain concatSegmentsChain = FFFilterChain.withLabels(lastConcatInputLabels, List.of("final"), List.of(concatFilter));
 		ffmpeg.getFilterGraph().addChain(concatSegmentsChain);
 		
 		applyOutputOptions(ffmpeg);
@@ -117,6 +114,10 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 				currentOptions.getAudio().get("impl"))
 				.map(VPScriptOption::textValue).orElse("");
 		audioProcessor = AAudioProcessor.getImpl(audioProcessorName);
+	}
+
+	private void selectVideoProcessor() {
+		videoProcessor = new VideoProcessorDefault(filtersRegistry);
 	}
 
 	private List<Command> createAudioCommands() {
@@ -174,7 +175,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 	}
 
 	private void beginSegment() {
-		currentSegment = new Segment(filtersRegistry, nextSegmentNumber++, nextInputNumber);
+		currentSegment = new Segment(nextSegmentNumber++, nextInputNumber);
 		currentSegment.remeberOptions(currentOptions);
 	}
 
@@ -191,7 +192,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 					break;
 			}
 		}
-		ffmpeg.addGlobalOptions(FFOption.of("an")); // FIXME
+		ffmpeg.addGlobalOptions(audioProcessor.ffGlobalOptions());
 	}
 	
 	private void applyOutputOptions(FFMPEG ffmpeg) {
@@ -231,7 +232,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 				ffOutput.withOption(option.toFFOption(optionsMapping.get(key)));
 			}
 		});
-		ffOutput.withMap(FFMap.ofLabel("v"));
+		ffOutput.withMap(FFMap.ofLabel("final"));
 		ffmpeg.addOutputs(ffOutput);
 	}
 
