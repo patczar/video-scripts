@@ -49,5 +49,23 @@
 	 "vp-params": ["autocurves"],
 	 "class": "net.patrykczarnik.vp.custom_filters.AutoCurves"
 	}
+],
+"audio": [
+	{"impl": "sox",
+	 "position": 605,
+	 "vp-param": "norm",
+	 "sox-effect": "norm"
+	},
+	{"impl": "sox",
+	 "position": 620,
+	 "vp-param": "vol",
+	 "sox-effect": "vol"
+	},
+	{"impl": "simple",
+	 "position": 620,
+	 "vp-param": "vol",
+	 "ff-filter": "volume",
+	 "ff-params": ["volume"]
+	}
 ]
 }

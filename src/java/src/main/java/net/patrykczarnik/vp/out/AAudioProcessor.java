@@ -27,9 +27,9 @@ public interface AAudioProcessor {
 	
 	List<FFOption> ffGlobalOptions();
 	
-	public static AAudioProcessor getImpl(String name) {
+	public static AAudioProcessor getImpl(String name, FiltersRegistry filtersRegistry) {
 		switch(name) {
-			case "sox": return new AudioProcessorSox();
+			case "sox": return new AudioProcessorSox(filtersRegistry);
 			case "none":
 			case "":
 				return new AudioProcessorNone();

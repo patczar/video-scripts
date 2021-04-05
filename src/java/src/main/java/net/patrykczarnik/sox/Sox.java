@@ -24,7 +24,7 @@ public class Sox implements Command {
 
     @Override
     public String toString() {
-        return "FFMPEG " + String.join(" ", getOptions());
+        return "SOX " + String.join(" ", getOptions());
     }
     
     public List<SoxInputOutput> getInputs() {

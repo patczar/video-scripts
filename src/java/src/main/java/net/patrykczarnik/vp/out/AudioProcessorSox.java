@@ -1,15 +1,16 @@
 package net.patrykczarnik.vp.out;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import net.patrykczarnik.commands.Command;
 import net.patrykczarnik.ffmpeg.FFFilter;
 import net.patrykczarnik.ffmpeg.FFFilterChain;
 import net.patrykczarnik.ffmpeg.FFFilterGraph;
 import net.patrykczarnik.ffmpeg.FFFilterOption;
-import net.patrykczarnik.ffmpeg.FFInput;
 import net.patrykczarnik.ffmpeg.FFMPEG;
 import net.patrykczarnik.ffmpeg.FFMap;
 import net.patrykczarnik.ffmpeg.FFOption;
@@ -21,11 +22,18 @@ import net.patrykczarnik.sox.SoxValue;
 import net.patrykczarnik.utils.CollectionUtils;
 import net.patrykczarnik.utils.Positioned;
 import net.patrykczarnik.vp.in.VPScriptEntryFile;
+import net.patrykczarnik.vp.in.VPScriptOption;
 
 public class AudioProcessorSox implements AAudioProcessor {
 	private static final String AUDIO_LABEL = "audio";
 	private final String SEGMENT_FILE_BEFORE_PATTERN = "aseg%04d.wav";
 	private final String SEGMENT_FILE_AFTER_PATTERN = "bseg%04d.wav";
+
+	private FiltersRegistry filtersRegistry;
+	
+	public AudioProcessorSox(FiltersRegistry filtersRegistry) {
+		this.filtersRegistry = filtersRegistry;
+	}
 
 	@Override
 	public List<Command> commandsBefore() {
@@ -72,11 +80,14 @@ public class AudioProcessorSox implements AAudioProcessor {
 		sox.addInputs(SoxInputOutput.ofFile(fileBefore));
 		sox.setOutput(SoxInputOutput.ofFile(fileAfter));
 		
-		sox.addEffects(SoxEffect.of("norm"));
+		List<Positioned<SoxEffect>> soxEffects = new ArrayList<>();
 		double speed = TranslationCommons.realSpeedChange(segment.getRemeberedOptions());
 		if(speed != 1.0) {
-			sox.addEffects(soxEffectsForSpeedChange(speed));
+			soxEffects.addAll(soxEffectsForSpeedChange(speed));
 		}
+		soxEffects.addAll(makeSoxEffects(segment));
+		soxEffects.sort(null);
+		sox.addEffects(CollectionUtils.mapList(soxEffects, Positioned::getValue));
 		
 		return List.of(ffmpeg, sox);
 	}
@@ -119,10 +130,28 @@ public class AudioProcessorSox implements AAudioProcessor {
 		return String.format(SEGMENT_FILE_AFTER_PATTERN, nr);
 	}
 	
-	private List<SoxEffect> soxEffectsForSpeedChange(double speed) {
-		return List.of(SoxEffect.withOptions("speed", SoxValue.f(speed)));
+	private List<Positioned<SoxEffect>> makeSoxEffects(Segment segment) {
+		List<Positioned<SoxEffect>> filters = new ArrayList<>();
+		Set<AFilterMapper> mappers = new LinkedHashSet<>();
+		for(VPScriptOption vpOption : segment.getRemeberedOptions().getAudio().values()) {
+			Set<AFilterMapper> foundMappers = filtersRegistry.get("audio", vpOption.getName());
+			for(AFilterMapper mapper : foundMappers) {
+				if(mappers.add(mapper)) {
+					mapper.begin();
+				}
+				mapper.acceptOption(vpOption);
+			}
+		}
+		for(AFilterMapper filterMapper : mappers) {
+			filters.addAll(filterMapper.getCollectedSoxEffects());
+		}
+		return filters;
 	}
 
+	private List<Positioned<SoxEffect>> soxEffectsForSpeedChange(double speed) {
+		return List.of(Positioned.of(610, SoxEffect.withOptions("speed", SoxValue.f(speed))));
+	}
+	
 	private String labelForSegmentChain(int segmentNumber) {
 		return String.format("aseg%d", segmentNumber);
 	}

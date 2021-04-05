@@ -3,6 +3,7 @@ package net.patrykczarnik.vp.out;
 import java.util.List;
 
 import net.patrykczarnik.ffmpeg.FFFilter;
+import net.patrykczarnik.sox.SoxEffect;
 import net.patrykczarnik.utils.Positioned;
 import net.patrykczarnik.vp.in.VPScriptOption;
 
@@ -11,9 +12,13 @@ public interface AFilterMapper {
 	
 	void acceptOption(VPScriptOption vpOption);
 
-	List<Positioned<FFFilter>> getCollectedFFFilters();
-	
-	// TODO SOX filters? Other options?
+	default List<Positioned<FFFilter>> getCollectedFFFilters() {
+		return List.of();		
+	}
+
+	default List<Positioned<SoxEffect>> getCollectedSoxEffects() {
+		return List.of();
+	}
 	
 	public static final int POSITION_DEFAULT = 400;
 

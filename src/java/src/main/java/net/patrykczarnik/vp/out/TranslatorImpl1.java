@@ -113,7 +113,7 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		String audioProcessorName = Optional.ofNullable(
 				currentOptions.getAudio().get("impl"))
 				.map(VPScriptOption::textValue).orElse("");
-		audioProcessor = AAudioProcessor.getImpl(audioProcessorName);
+		audioProcessor = AAudioProcessor.getImpl(audioProcessorName, filtersRegistry);
 	}
 
 	private void selectVideoProcessor() {
@@ -203,8 +203,8 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		} else {
 			outputFile = "out.mp4";
 		}
-		if(outputOptions.containsKey("framerate")) {
-			ffmpeg.addGlobalOptions(FFOption.of("r", outputOptions.get("framerate").textValue()));
+		if(outputOptions.containsKey("fps")) {
+			ffmpeg.addGlobalOptions(FFOption.of("r", outputOptions.get("fps").textValue()));
 		}
 		String codec = "h264";
 		if(outputOptions.containsKey("codec")) {

@@ -21,9 +21,6 @@ public class VideoProcessorDefault implements AVideoProcessor {
 
 	@Override
 	public List<Positioned<FFFilter>> makeAllFilters(Segment segment) {
-		for(AFilterMapper mapper : filtersRegistry.getAll()) {
-			mapper.begin();
-		}
 		List<Positioned<FFFilter>> allFilters = new ArrayList<>();
 		allFilters.addAll(makeSpeedFilters(segment));
 		allFilters.addAll(makeVideoFilters(segment));
@@ -65,20 +62,22 @@ public class VideoProcessorDefault implements AVideoProcessor {
 		List<Positioned<FFFilter>> filters = new ArrayList<>();
 		if(segment.getRemeberedOptions().getGlobal().containsKey("pixel_format")) {
 			String format = segment.getRemeberedOptions().getGlobal().get("pixel_format").textValue();
-			FFFilter filter = FFFilter.newFilter("format", FFFilterOption.text(format ));
+			FFFilter filter = FFFilter.newFilter("format", FFFilterOption.text(format));
 			filters.add(Positioned.of(AFilterMapper.POSITION_VIDEO_FORMAT, filter));
 		}
 		if(segment.getRemeberedOptions().getOutput().containsKey("pixel_format")) {
 			String format = segment.getRemeberedOptions().getOutput().get("pixel_format").textValue();
-			FFFilter filter = FFFilter.newFilter("format", FFFilterOption.text(format ));
+			FFFilter filter = FFFilter.newFilter("format", FFFilterOption.text(format));
 			filters.add(Positioned.of(AFilterMapper.POSITION_VIDEO_FINAL_FORMAT, filter));
 		}
 		Set<AFilterMapper> mappers = new LinkedHashSet<>();
 		for(VPScriptOption vpOption : segment.getRemeberedOptions().getVideo().values()) {
 			Set<AFilterMapper> foundMappers = filtersRegistry.get("video", vpOption.getName());
 			for(AFilterMapper mapper : foundMappers) {
+				if(mappers.add(mapper)) {
+					mapper.begin();
+				}
 				mapper.acceptOption(vpOption);
-				mappers.add(mapper);				
 			}
 		}
 		for(AFilterMapper filterMapper : mappers) {

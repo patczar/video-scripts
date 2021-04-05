@@ -78,6 +78,7 @@ public class FiltersRegistry {
 			case "simple": return newSimple(spec);
 			case "merging": return getMerging(spec);
 			case "custom": return getCustom(spec);
+			case "sox": return newSox(spec);
 			default: throw new IllegalArgumentException("Unknown filter mapper impl: " + impl);
 		}
 	}
@@ -95,6 +96,16 @@ public class FiltersRegistry {
 			defaultParamsSpec.forEach((k, v) -> {
 				mapper.addDefaultParams(jsonValueToFFFilterOption(k, v));
 			});
+		return mapper;
+	}
+
+	private AParamOrientedFilterMapper newSox(JsonObject spec) {
+		int position = spec.getInt("position", AFilterMapper.POSITION_DEFAULT);
+		String soxName = spec.getString("sox-effect");
+		String vpName = spec.getString("vp-param");
+		// JsonObject defaultParamsSpec = spec.getJsonObject("ff-default-params");
+		
+		FilterMapperSimpleSoxImpl mapper = new FilterMapperSimpleSoxImpl(vpName, soxName, position);
 		return mapper;
 	}
 
