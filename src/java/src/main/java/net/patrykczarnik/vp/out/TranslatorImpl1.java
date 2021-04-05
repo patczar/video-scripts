@@ -21,6 +21,7 @@ import net.patrykczarnik.ffmpeg.FFOutput;
 import net.patrykczarnik.vp.in.VPScriptEntryFile;
 import net.patrykczarnik.vp.in.VPScriptEntrySetOptions;
 import net.patrykczarnik.vp.in.VPScriptOption;
+import static net.patrykczarnik.vp.out.TranslationCommons.FPS_OPTION;
 
 /**
  * @author Patryk Czarnik
@@ -203,15 +204,15 @@ public class TranslatorImpl1 extends TranslatorAbstractImpl {
 		} else {
 			outputFile = "out.mp4";
 		}
-		if(outputOptions.containsKey("fps")) {
-			ffmpeg.addGlobalOptions(FFOption.of("r", outputOptions.get("fps").textValue()));
-		}
 		String codec = "h264";
 		if(outputOptions.containsKey("codec")) {
 			codec = outputOptions.get("codec").textValue();
 		}
 		
 		FFOutput ffOutput = FFOutput.forFile(outputFile);
+		if(outputOptions.containsKey(FPS_OPTION)) {
+			ffOutput.withOption(FFOption.of("r", outputOptions.get(FPS_OPTION).textValue()));
+		}
 		ffOutput.withOption(FFOption.of("c:v", codec));
 		Map<String, String> optionsMapping = new TreeMap<>(Map.of(
 				"profile", "profile:v",

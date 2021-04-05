@@ -3,6 +3,7 @@ package net.patrykczarnik.vp.out;
 import net.patrykczarnik.vp.in.VPScriptOption;
 
 public final class TranslationCommons {
+	public static final String FPS_OPTION = "fps";
 	
 	private TranslationCommons() { }
 	

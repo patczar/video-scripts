@@ -11,6 +11,8 @@ import net.patrykczarnik.ffmpeg.FFFilterOption;
 import net.patrykczarnik.utils.CollectionUtils;
 import net.patrykczarnik.utils.Positioned;
 import net.patrykczarnik.vp.in.VPScriptOption;
+import static net.patrykczarnik.vp.out.TranslationCommons.FPS_OPTION;
+
 
 public class VideoProcessorDefault implements AVideoProcessor {
 	private FiltersRegistry filtersRegistry;
@@ -33,8 +35,8 @@ public class VideoProcessorDefault implements AVideoProcessor {
 		Integer framerate = null;
 		String pts = "PTS";
 		String tb = "TB";
-		if(segment.getRemeberedOptions().getOutput().containsKey("framerate")) {
-			framerate = segment.getRemeberedOptions().getOutput().get("framerate").intValue();
+		if(segment.getRemeberedOptions().getOutput().containsKey(FPS_OPTION)) {
+			framerate = segment.getRemeberedOptions().getOutput().get(FPS_OPTION).intValue();
 			pts = "N";
 			tb = String.format("1/%d", framerate);
 		}
